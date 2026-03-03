@@ -492,6 +492,21 @@ function ensureOutSuggest(){
   }
   return el;
 }
+
+// ====== SUGESTÃO: cor por núcleo (V10.0.2) ======
+function sugestaoCategoria(cityText){
+  const k = normalize(cityText);
+  const inAna = setAna.has(k);
+  const inBra = setBra.has(k);
+  const inCob = setCob.has(k);
+  const count = (inAna?1:0) + (inBra?1:0) + (inCob?1:0);
+  if (count >= 2) return 'nao';
+  if (inCob) return 'ok';
+  if (inBra) return 'bra';
+  if (inAna) return 'ana';
+  return 'nao';
+}
+
 // ====== CHIPS (delegação de eventos) — V10.0.1 ======
 function onChipActivate(text){
   if(!text) return;
@@ -597,7 +612,8 @@ function mostrarResultado(termOriginal, focoCidade, status, sugestoes = [], alia
     const actions = sug.querySelector('.sug-actions');
     sugestoes.forEach((sText) => {
       const b = document.createElement('button');
-      b.className = 'sug-pill';
+      const cat = sugestaoCategoria(sText);
+      b.className = 'sug-pill ' + cat;
       b.type = 'button';
       b.textContent = sText;
       b.setAttribute('aria-label', `Usar sugestão ${sText}`);

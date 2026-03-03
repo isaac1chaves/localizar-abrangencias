@@ -74,3 +74,6 @@ V9.0.0: Release — Toggle de tema (claro/escuro) integrado + preferência salva
 
 ---
 V10.0.1: Acessibilidade (label sr-only), otimização de performance (delegação de eventos nos chips). Build: 02-03-2026.
+
+---
+V10.0.2: Sugestões coloridas por núcleo (pílulas do 'Você quis dizer' herdam a cor do badge: Anápolis/Brasília/Nossa abrangência). Build: 03-03-2026.
