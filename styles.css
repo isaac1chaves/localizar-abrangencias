@@ -1242,3 +1242,57 @@ html[data-theme="light"] .credit{
   color: rgba(55, 70, 95, .82) !important;
 }
 
+
+
+/* =====================================================
+   SUG_PILL_COLOR_BY_NUCLEO_V10_0_2
+   - Pílulas de sugestão ("Você quis dizer") herdam as cores dos badges
+   - ok  = Nossa Abrangência (verde)
+   - bra = Núcleo Brasília (roxo)
+   - ana = Núcleo Anápolis (vermelho)
+   ===================================================== */
+
+/* Tema escuro (padrão) */
+.suggest .sug-actions .sug-pill.ok{
+  background: #0d2a1f !important;
+  border-color: #184c39 !important;
+  color: #7df7c8 !important;
+}
+.suggest .sug-actions .sug-pill.bra{
+  background: #231933 !important;
+  border-color: #3b2b6b !important;
+  color: #c7b2ff !important;
+}
+.suggest .sug-actions .sug-pill.ana{
+  background: #2b1115 !important;
+  border-color: #5b2a30 !important;
+  color: #ffb3bd !important;
+}
+/* fallback (não localizado/ambíguo) */
+.suggest .sug-actions .sug-pill.nao{
+  background: #0e241f !important;
+  border-color: rgba(27,74,61,.55) !important;
+  color: inherit !important;
+}
+
+/* Hover/active (suave, sem alterar o layout) */
+.suggest .sug-actions .sug-pill.ok:hover{ background: color-mix(in oklab, #0d2a1f, white 6%) !important; }
+.suggest .sug-actions .sug-pill.bra:hover{ background: color-mix(in oklab, #231933, white 6%) !important; }
+.suggest .sug-actions .sug-pill.ana:hover{ background: color-mix(in oklab, #2b1115, white 6%) !important; }
+
+/* Tema claro */
+html[data-theme="light"] .suggest .sug-actions .sug-pill.ok{
+  background: rgba(24,185,129,.16) !important;
+  border-color: rgba(24,185,129,.30) !important;
+  color: #0b3b2b !important;
+}
+html[data-theme="light"] .suggest .sug-actions .sug-pill.bra{
+  background: rgba(124,58,237,.12) !important;
+  border-color: rgba(124,58,237,.24) !important;
+  color: #2f145d !important;
+}
+html[data-theme="light"] .suggest .sug-actions .sug-pill.ana{
+  background: rgba(217,45,32,.12) !important;
+  border-color: rgba(217,45,32,.26) !important;
+  color: #6b1010 !important;
+}
