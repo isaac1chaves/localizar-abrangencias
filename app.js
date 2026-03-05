@@ -424,7 +424,25 @@ function bindCustomScrollbar(chipsEl){
   const bar = ensureCustomScrollbar(chipsEl);
   if(!bar) return;
   const thumb = bar.querySelector('.thumb');
-  chipsEl.addEventListener('scroll', () => syncCustomScrollbar(chipsEl), {passive:true});
+  const card = getCardOf(chipsEl);
+  let scrollTimer = null;
+  chipsEl.addEventListener('scroll', () => {
+
+  syncCustomScrollbar(chipsEl);
+
+  if(!card) return;
+
+  card.classList.add('is-scrolling');
+
+  if(scrollTimer){
+    clearTimeout(scrollTimer);
+  }
+
+  scrollTimer = setTimeout(()=>{
+    card.classList.remove('is-scrolling');
+  },800);
+
+},{passive:true});
   bar.addEventListener('mousedown', (e) => {
     if(e.target === thumb) return;
     const rect = bar.getBoundingClientRect();

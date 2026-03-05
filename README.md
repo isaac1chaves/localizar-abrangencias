@@ -77,3 +77,7 @@ V10.0.1: Acessibilidade (label sr-only), otimização de performance (delegaçã
 
 ---
 V10.0.2: Sugestões coloridas por núcleo (pílulas do 'Você quis dizer' herdam a cor do badge: Anápolis/Brasília/Nossa abrangência). Build: 03-03-2026.
+
+---
+
+V11.0.2-FIX: Scrollbar auto-hide (aparece ao hover/scroll e some com fade após inatividade) + correção do bug que podia impedir o carregamento das listas em alguns builds. Build: 05-03-2026.
