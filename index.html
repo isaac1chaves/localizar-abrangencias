@@ -2,7 +2,26 @@
 <html lang="pt-br">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+<script>
+(function () {
+  try {
+    var html = document.documentElement;
+    var mem = navigator.deviceMemory || 8;          // GB estimado
+    var cores = navigator.hardwareConcurrency || 8; // núcleos lógicos
+    var saveData = navigator.connection && navigator.connection.saveData;
+    var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var low = (mem <= 4) || (cores <= 4) || !!saveData || !!reduceMotion;
+    // Override manual: localStorage 'perf_lite' = '1' (força) ou '0' (desliga)
+    var forced = null;
+    try { forced = localStorage.getItem('perf_lite'); } catch (e) {}
+    if (forced === '1') low = true;
+    if (forced === '0') low = false;
+    if (low) html.classList.add('perf-lite');
+  } catch (e) {}
+})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pesquisa de Abrangência (Núcleos Anápolis / Brasília / Nossa Abrangência)</title>
   <meta name="description" content="Ferramenta rápida para consultar a abrangência de cidades por núcleo (Anápolis, Brasília e Nossa Abrangência)." />
 
@@ -73,7 +92,7 @@
   </main>
 
   <div class="credit" id="credit">
-    <span class="credit-main" id="creditMain">V11.0.2 | 03-03-2026 | By Renapsi</span>
+    <span class="credit-main" id="creditMain">V11.1.2 | 03-03-2026 | By Renapsi</span>
   </div>
 
   <script defer src="./app.js"></script>

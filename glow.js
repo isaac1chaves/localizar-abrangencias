@@ -1,6 +1,7 @@
 // V3.5: Glow aleatório (cantos) — sem seguir mouse
 (function(){
   try{
+  var isLite = document.documentElement && document.documentElement.classList && document.documentElement.classList.contains('perf-lite');
     // respeita reduced motion
     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
@@ -29,6 +30,7 @@
     }
 
     function setVars(x, y, s, glow, halo){
+    if(isLite){ glow = Math.min(glow, 0.65); halo = Math.min(halo, 0.55); }
       root.style.setProperty('--gX', x.toFixed(2) + 'vw');
       root.style.setProperty('--gY', y.toFixed(2) + 'vh');
       root.style.setProperty('--gS', s.toFixed(3));
@@ -54,7 +56,7 @@
       }, 220);
 
       // Tempo aceso (lento)
-      var onTime = rand(5200, 7800);
+      var onTime = isLite ? rand(6800, 9800) : rand(5200, 7800);
 
       // Fade out
       setTimeout(function(){
@@ -62,7 +64,7 @@
       }, 220 + onTime);
 
       // Intervalo apagado e repete
-      var offTime = rand(1800, 2600);
+      var offTime = isLite ? rand(2200, 3400) : rand(1800, 2600);
       setTimeout(cycle, 220 + onTime + 3600 + offTime);
     }
 

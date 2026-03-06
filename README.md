@@ -80,4 +80,4 @@ V10.0.2: Sugestões coloridas por núcleo (pílulas do 'Você quis dizer' herdam
 
 ---
 
-V11.0.2-FIX: Scrollbar auto-hide (aparece ao hover/scroll e some com fade após inatividade) + correção do bug que podia impedir o carregamento das listas em alguns builds. Build: 05-03-2026.
+V11.1.2-FIX: Scrollbar auto-hide (aparece ao hover/scroll e some com fade após inatividade) + correção do bug que podia impedir o carregamento das listas em alguns builds. Build: 05-03-2026.

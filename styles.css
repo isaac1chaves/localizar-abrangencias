@@ -1335,3 +1335,58 @@ html[data-theme="light"] .suggest .sug-actions .sug-pill.ana{
   transform: translateX(0);
   pointer-events:auto;
 }
+
+
+/* =====================================================
+   PERF_LITE — Mantém estética, reduz custo em PCs antigos
+   - Não remove elementos, só barateia blur/sombras/camadas
+   - Ativado automaticamente (deviceMemory/cores/reduced-motion) ou manual:
+     localStorage perf_lite = '1' (força) / '0' (desliga)
+   ===================================================== */
+html.perf-lite .app,
+html.perf-lite .card{
+  /* Blur lindo, mas caro: reduzimos em vez de desativar */
+  -webkit-backdrop-filter: saturate(110%) blur(6px) !important;
+  backdrop-filter: saturate(110%) blur(6px) !important;
+
+  /* Sombras um pouco menores (mesma estética, menos área de composição) */
+  box-shadow:
+    0 16px 46px rgba(0,0,0,.46),
+    inset 0 1px 0 rgba(255,255,255,.07) !important;
+}
+
+/* Fundo glow: mantém o look, mas com filtros mais leves */
+html.perf-lite body::before{
+  filter: blur(24px) saturate(122%) !important;
+  opacity: calc(var(--gO) * 0.88) !important;
+}
+html.perf-lite body::after{
+  filter: blur(14px) !important;
+  opacity: calc(var(--hO) * 0.90) !important;
+}
+
+/* Menos trabalho por segundo: respiração mais lenta */
+html.perf-lite body::before,
+html.perf-lite body::after{
+  animation-duration: 18s !important;
+}
+
+/* Transições mais curtas e estáveis */
+html.perf-lite .chip,
+html.perf-lite .search,
+html.perf-lite .result,
+html.perf-lite .card,
+html.perf-lite .suggest{
+  transition-duration: .18s !important;
+}
+
+/* Sugestão: expansão suave (JS controla altura) */
+html.perf-lite .result-suggest-wrap{
+  transition: height .26s ease, margin-top .26s ease !important;
+}
+
+/* Evita will-change excessivo em PCs fracos */
+html.perf-lite .chip,
+html.perf-lite .suggest{
+  will-change: auto !important;
+}
