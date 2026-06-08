@@ -1,0 +1,2933 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  
+<script>
+(function () {
+  try {
+    var html = document.documentElement;
+    var mem = navigator.deviceMemory || 8;          // GB estimado
+    var cores = navigator.hardwareConcurrency || 8; // núcleos lógicos
+    var saveData = navigator.connection && navigator.connection.saveData;
+    var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var low = (mem <= 4) || (cores <= 4) || !!saveData || !!reduceMotion;
+    // Override manual: localStorage 'perf_lite' = '1' (força) ou '0' (desliga)
+    var forced = null;
+    try { forced = localStorage.getItem('perf_lite'); } catch (e) {}
+    if (forced === '1') low = true;
+    if (forced === '0') low = false;
+    if (low) html.classList.add('perf-lite');
+  } catch (e) {}
+})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pesquisa de Abrangência (Núcleos Anápolis / Brasília / Nossa Abrangência)</title>
+  <meta name="description" content="Ferramenta rápida para consultar a abrangência de cidades por núcleo (Anápolis, Brasília e Nossa Abrangência)." />
+
+  <!-- Favicon (mantém simples para evitar arquivos inexistentes) -->
+<meta name="theme-color" content="#0b1020" />
+
+  <!-- Mantém o CSS ORIGINAL (visual idêntico) -->
+
+  <style>
+/* =============================================================== */
+/* BASE.CSS */
+/* =============================================================== */
+:root { --bg:#0b1020; --card:#141a2f; --muted:#8aa1b1; --text:#e9f1f7; --accent:#4cc2ff; --accent-2:#7df7c8; --danger:#ff6b6b; --warn:#ffb86b; }
+    * { box-sizing: border-box; }
+    body {
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Noto Sans','Helvetica Neue',Arial,'Apple Color Emoji','Segoe UI Emoji';
+      background: radial-gradient(1000px 600px at 10% 0%, #172042 0%, var(--bg) 45%),
+                  radial-gradient(800px 500px at 90% 10%, #0f2c3f 0%, transparent 40%), var(--bg);
+      color:var(--text); min-height:100dvh; display:grid; place-items:center; padding:24px;
+    }
+    .app { width:min(1120px,100%); background: color-mix(in oklab, var(--card), black 10%);
+      border:1px solid color-mix(in oklab, var(--card), white 8%);
+      border-radius:16px; padding:20px 20px 16px; box-shadow:0 20px 60px rgba(0,0,0,.35); }
+    header { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    h1 { font-size: clamp(18px, 2.1vw, 24px); margin:0; letter-spacing:.2px; }
+    .pill { font-size:12px; padding:4px 10px; border-radius:999px; background:#0d2638; color:var(--accent); border:1px solid #1f3f58; }
+    .search {
+      margin-top:16px; display:grid; gap:10px; grid-template-columns: 1fr; align-items:center;
+      background:#0f1528; border:1px solid #212b4b; padding:12px; border-radius:12px;
+    }
+    .search input[type="text"] { width:100%; background:transparent; border:none; outline:none; color:var(--text); font-size:16px; padding:8px; letter-spacing:.2px; }
+    .search button { background: linear-gradient(180deg, var(--accent), #2996cf); color:#00243a; font-weight:700; border:none; border-radius:10px; padding:10px 14px; cursor:pointer; box-shadow:0 6px 18px rgba(76,194,255,.35); transition:transform .06s ease; }
+    .search button:active { transform: translateY(1px); }
+    .result { margin-top:14px; padding:14px; border-radius:12px; border:1px solid rgba(33,43,75,.95); background:#0f1528; display:grid; gap:8px; }
+    .badge { display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; font-weight:600; }
+    .ana { background:#2b1115; color:#ffb3bd; border:1px solid #5b2a30; }
+    .bra { background:#231933; color:#c7b2ff; border:1px solid #3b2b6b; }
+    .ok  { background:#0d2a1f; color:#7df7c8; border:1px solid #184c39; }
+    .nao { background:#2a1a0d; color:#ffdbb0; border:1px solid #4b2b1a; }
+    .hint { color:var(--muted); font-size:13px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px; margin-top:8px; }
+    .card { background:#0f1528; border:1px solid #212b4b; border-radius:12px; padding:12px; }
+    .card h3 { margin:0 0 8px; font-size:14px; color:#a9c6ff; letter-spacing:.2px; }
+    .chips { display:flex; gap:6px; flex-wrap:wrap; max-height:240px; overflow:auto; }
+    .chip { padding:6px 10px; border-radius:999px; background:#0c1328; border:1px solid #1b2a56; color:#cfe3ff; font-size:12px; cursor:pointer; }
+    .chip:hover { background:#0f1a3b; }
+    footer { margin-top:16px; color:var(--muted); font-size:12px; text-align:center; }
+    .credit { position:fixed; bottom:6px; right:10px; font-size:10px; letter-spacing:.3px; color:#9bb4c7; opacity:.65; user-select:none; pointer-events:none; }
+
+    .suggest { display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center; padding:10px 12px; border-radius:12px;
+      background: linear-gradient(180deg, #0b1e18, #0f2a22); border:1px solid #1b4a3d; box-shadow: 0 6px 20px rgba(0,0,0,.28); }
+    .sug-icon { width:28px; height:28px; display:grid; place-items:center; border-radius:999px; background:#0f3a2f; color:#9be8cf; box-shadow: inset 0 0 0 1px #1b4a3d; }
+    .sug-title { color:#bff6e4; font-weight:700; }
+    .sug-sub { color:#9be8cf; font-size:13px; }
+    .sug-actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .sug-pill { padding:6px 10px; border-radius:999px; border:1px solid #1b4a3d; background:#0e241f; color:#bff6e4; cursor:pointer; font-weight:600; }
+    .sug-pill:hover { background:#123228; }
+    .linklike { background:none; color:#7df7c8; border:none; padding:0; font:inherit; cursor:pointer; text-decoration:underline; }
+
+.chip.is-highlight {
+  background: linear-gradient(180deg, #7df7c8, #1fbf8d);
+  color: #062016;
+  border-color: #2de3b0;
+  box-shadow: 0 0 0 3px rgba(125, 247, 200, 0.18), 0 10px 26px rgba(125, 247, 200, 0.18);
+  transform: translateY(-1px);
+}
+
+html { scroll-behavior: smooth; }
+
+
+/* =============================================================== */
+/* COMPONENTS.CSS */
+/* =============================================================== */
+.report-bugs{
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  z-index: 999999;
+  pointer-events: auto;
+}
+.report-bugs a{
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(15,21,40,.85);
+  border: 1px solid rgba(33,43,75,.95);
+  box-shadow: 0 10px 26px rgba(0,0,0,.45);
+  color: var(--accent);
+  text-decoration: none;
+  line-height: 1;
+}
+.report-bugs a:hover{ transform: translateY(-1px); box-shadow: 0 14px 30px rgba(0,0,0,.55); }
+.report-bugs a:active{ transform: translateY(0); }
+
+.report-bugs a{ position: relative; }
+.report-bugs a::after{
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  font-size: 11px;
+  letter-spacing: .2px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(15,21,40,.95);
+  border: 1px solid rgba(33,43,75,.95);
+  color: #e9f1f7;
+  box-shadow: 0 12px 28px rgba(0,0,0,.55);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s ease, transform .15s ease;
+}
+.report-bugs a::before{
+  content: "";
+  position: absolute;
+  left: calc(100% + 4px);
+  top: 50%;
+  transform: translateY(-50%);
+  border: 6px solid transparent;
+  border-right-color: rgba(33,43,75,.95);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s ease;
+}
+.report-bugs a:hover::after,
+.report-bugs a:focus-visible::after{
+  opacity: 1;
+  transform: translateY(-50%) translateX(2px);
+}
+.report-bugs a:hover::before,
+.report-bugs a:focus-visible::before{ opacity: 1; }
+
+.bug-icon{ width: 18px; height: 18px; display: block; fill: currentColor; }
+
+.report-bugs a.is-pulsing {
+  animation: rbPulse 900ms ease-in-out 0s 4 alternate;
+  box-shadow: 0 12px 30px rgba(76,194,255,.55);
+}
+@keyframes rbPulse {
+  0%   { transform: translateY(0) scale(1); }
+  100% { transform: translateY(-1px) scale(1.06); }
+}
+
+.report-bubble { position: fixed; left: 58px; bottom: 18px; z-index: 1000000; padding: 10px 12px; border-radius: 12px; background: rgba(15,21,40,.98); border: 1px solid rgba(33,43,75,.95); color: #e9f1f7; font-size: 12px; letter-spacing: .2px; box-shadow: 0 14px 36px rgba(0,0,0,.55); opacity: 0; transform: translateY(6px); transition: opacity .18s ease, transform .18s ease; max-width: 260px; pointer-events: none; }
+.report-bubble.is-show { opacity: 1; transform: translateY(0); }
+
+.credit .credit-main, .credit .credit-hidden { display:inline-block; line-height:1; vertical-align:middle; }
+.credit .credit-main { white-space: nowrap; }
+.credit.is-revealed .credit-main { transform: translateX(-4px); }
+.credit.is-revealed .credit-hidden { transform: translateX(-4px); }
+
+.result-suggest{
+  height:56px; display:flex; align-items:center; box-sizing:border-box;
+  border-radius:12px; padding:8px 12px; overflow:hidden;
+}
+
+.result-suggest .suggest{
+  height:100%; display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px;
+  border-radius:10px;
+  padding:8px 10px;
+  border:1px solid rgba(27,74,61,.55);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.result-suggest .sug-title,
+.result-suggest .sug-sub{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+.result-suggest .sug-actions{ display:flex; gap:8px; flex-wrap:nowrap; overflow:hidden; }
+.result-suggest .sug-actions .sug-pill{ white-space:nowrap; }
+
+@media (max-width:720px){ .result-suggest{ height:auto; } .result-suggest .suggest{ height:auto; } }
+
+.suggest{
+  background: linear-gradient(180deg, #0b1e18, #0f2a22);
+  border: 1px solid #1b4a3d;
+  border-radius: 12px;
+  box-shadow: 0 10px 26px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.04);
+  color: #bff6e4;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: auto;
+  padding: 8px 12px;
+  margin-top: 12px;
+  box-sizing: border-box;
+}
+.suggest .sug-icon{ width:28px; height:28px; display:grid; place-items:center; border-radius:999px; background:#0f3a2f; color:#9be8cf; box-shadow: inset 0 0 0 1px #1b4a3d; }
+.suggest .sug-title { color:#bff6e4; font-weight:700; }
+.suggest .sug-sub   { color:#9be8cf; font-size:13px; }
+.suggest .sug-actions{ display:flex; gap:8px; flex-wrap: wrap; overflow: visible; }
+.suggest .sug-actions .sug-pill{ padding:6px 10px; border-radius:999px; border:1px solid #1b4a3d; background:#0e241f; color:#bff6e4; cursor:pointer; font-weight:600; white-space: nowrap; }
+.suggest .sug-actions .sug-pill:hover{ background:#123228; }
+.suggest .sug-title, .suggest .sug-sub{ white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 720px){ .suggest{ grid-template-columns: auto 1fr; } .suggest .sug-actions{ grid-column: 1 / -1; } }
+
+.result-suggest-wrap{ width:100%; margin-top:12px; box-sizing:border-box; }
+.result-suggest{ display: contents; height:auto; padding:0; border:none; background:none; box-shadow:none; }
+
+@media (prefers-reduced-motion: no-preference){
+  .chip{ transition: transform .12s ease, box-shadow .18s ease, background .18s ease; }
+  .chip:hover{ transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.25); }
+  .search button{ transition: transform .06s ease, box-shadow .18s ease; }
+  .search button:hover{ transform: translateY(-1px); box-shadow:0 10px 24px rgba(76,194,255,.45); }
+  .search{ transition: box-shadow .18s ease, border-color .18s ease; }
+  .search:focus-within{ box-shadow: 0 8px 22px rgba(76,194,255,.20); border-color:#2a6ea1; }
+}
+@media (prefers-reduced-motion: reduce){ *,*::before,*::after{ animation:none !important; transition:none !important; } }
+
+@media (prefers-reduced-motion: no-preference){
+  @keyframes suggestDrop{ from{ transform: translateY(-8px); } to{ transform: translateY(0); } }
+  .suggest.anim-drop{ animation: suggestDrop .18s ease-out 1; }
+}
+
+@media (prefers-reduced-motion: no-preference){
+  .result-suggest-wrap{
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height .22s ease, margin-top .22s ease;
+    margin-top: 0;
+  }
+  .result-suggest-wrap.is-open{
+    max-height: 480px;
+    margin-top: 12px;
+  }
+
+}
+
+@media (min-width: 721px){
+  .result{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    height:56px;
+    padding:8px 12px;
+    overflow:hidden;
+    box-sizing:border-box;
+  }
+  .result > .badge{ flex:0 0 auto; margin-right:4px; }
+  .result > div{
+    flex:1 1 auto;
+    min-width:260px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+}
+@media (max-width: 720px){
+  .result{ height:auto; min-height:48px; }
+}
+
+:root{
+  --bg:#0b1020;
+  --card:#141a2f;
+  --muted:#8aa1b1;
+  --text:#e9f1f7;
+  --accent:#4cc2ff;
+  --accent-2:#7df7c8;
+  --ring:#2a6ea1;
+}
+
+.app{
+  backdrop-filter: saturate(115%) blur(6px);
+  background: color-mix(in oklab, var(--card), black 6%);
+  border-radius: 18px;
+  border: 1px solid color-mix(in oklab, var(--card), white 10%);
+  box-shadow: 0 24px 70px rgba(0,0,0,.40);
+}
+
+header h1{
+  letter-spacing:.3px;
+  text-shadow: 0 1px 0 rgba(255,255,255,.04);
+}
+
+.search{
+  border-radius: 14px;
+  border: 1px solid #1d2846;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 10px 26px rgba(0,0,0,.22);
+}
+.search input[type="text"]{
+  font-size: 15.5px;
+}
+.search button{
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--accent), #2ea6e9);
+  box-shadow: 0 10px 24px rgba(76,194,255,.42);
+}
+
+.result{
+  border-radius: 12px;
+  border: 1px solid #223157;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+  background: #0f1528;
+}
+
+.badge{
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 6px 16px rgba(0,0,0,.22);
+}
+
+.suggest{
+  box-shadow: 0 14px 34px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.card{
+  border-radius: 14px;
+  border: 1px solid #223157;
+  background: #0f1528;
+  box-shadow: 0 12px 30px rgba(0,0,0,.28);
+}
+.card h3{
+  color: #b7ccff;
+  text-shadow: 0 1px 0 rgba(255,255,255,.04);
+}
+
+.chip{
+  border-radius: 999px;
+  background: #0c1328;
+  border: 1px solid #203060;
+  color:#d6e6ff;
+}
+.chip:hover{ background:#101c3b; border-color:#29447a; box-shadow: 0 6px 18px rgba(0,0,0,.24); }
+
+.chip.is-highlight{
+  background: linear-gradient(180deg, var(--accent-2), #1fbf8d);
+  color:#062016; border-color:#2de3b0;
+  box-shadow: 0 0 0 3px rgba(125,247,200,.18), 0 12px 28px rgba(125,247,200,.22);
+}
+
+:where(button, .chip, input){ outline: none; }
+:where(button, .chip, input):focus-visible{
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring), white 12%);
+}
+
+.chips::-webkit-scrollbar{ height: 8px; width: 8px; }
+.chips::-webkit-scrollbar-thumb{ background:#1f2d52; border-radius: 8px; }
+
+footer{ opacity:.9; }
+
+.search{
+  border-radius: 16px;
+  overflow: hidden;
+}
+.search input[type="text"]{
+  border: 1px solid #2a3d6f;
+  border-radius: 10px;
+  background: #0e1a33;
+  background-clip: padding-box;
+  padding: 10px;
+}
+
+.search input[type="text"]::-moz-focus-inner{ border:0; padding:0; }
+
+:root{
+  --bg-solid:#070b22;
+  --panel: rgba(13,19,48,.78);
+  --panel-2: rgba(8,12,34,.70);
+  --border: rgba(115,150,255,.18);
+  --text:#e9f1ff;
+  --muted:#a7b6d6;
+  --accent:#3aa7ff;
+  --accent-2:#7df7c8;
+  --ring:#2a6ea1;
+}
+
+.app{
+  background: var(--panel) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 22px 70px rgba(0,0,0,.52) !important;
+  -webkit-backdrop-filter: saturate(120%) blur(10px) !important;
+  backdrop-filter: saturate(100%) blur(10px) !important;
+}
+.search, .result, .card{
+  background: var(--panel-2) !important;
+  border: 1px solid rgba(115,150,255,.16) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 12px 28px rgba(0,0,0,.30) !important;
+}
+.search input[type="text"]{
+  background: rgba(9,16,50,.70) !important;
+  border: 1px solid rgba(115,150,255,.18) !important;
+  color: var(--text) !important;
+}
+.search input[type="text"]::placeholder{ color: rgba(167,182,214,.70) !important; }
+.search button{
+  background: linear-gradient(180deg, #3aa7ff, #2b7dd7) !important;
+  color:#021a2e !important;
+  box-shadow: 0 10px 24px rgba(58,167,255,.30) !important;
+}
+
+:where(input, button, .chip):focus,
+:where(input, button, .chip):focus-visible{ outline: none !important; box-shadow: none !important; }
+.search input[type="text"]:focus,
+.search input[type="text"]:focus-visible{ border-color: rgba(58,167,255,.60) !important; }
+
+.card h3{ position: relative; z-index: 1; }
+
+.chip.is-highlight,
+.chip.is-highlight:focus,
+.chip.is-highlight:focus-visible{
+  background: linear-gradient(180deg, var(--accent-2), #1fbf8d) !important;
+  color: #062016 !important;
+  border-color: #2de3b0 !important;
+  box-shadow: 0 0 0 3px rgba(125,247,200,.18), 0 12px 28px rgba(125,247,200,.22) !important;
+}
+
+@media (prefers-reduced-motion: no-preference){
+  @keyframes badgeIn{ from{ opacity:0; transform: translateY(-6px) scale(.96); filter: blur(2px);} to{opacity:1; transform: translateY(0) scale(1); filter: blur(0);} }
+  @keyframes badgeGlow{ 0%{ box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 0 0 0 rgba(58,167,255,0);} 100%{ box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 0 0 6px rgba(58,167,255,0);} }
+  .badge{ animation: badgeIn .18s ease-out 1, badgeGlow .55s ease-out 1; will-change: transform, opacity; }
+}
+@media (prefers-reduced-motion: reduce){ .badge{ animation:none !important; } }
+
+.chips{
+  padding-top: 10px;
+  padding-bottom: 10px;
+  scroll-padding-top: 14px;
+}
+
+.card h3{
+  margin-bottom: 10px;
+}
+
+.chips{ justify-content: center; }
+.grid{ align-items: stretch; gap: 14px; }
+.card{ display:flex; flex-direction:column; min-height: 320px; padding: 14px; }
+.card .chips{ flex: 1 1 auto; padding: 10px 6px; }
+.card h3{ margin-bottom: 12px; }
+@media (max-width: 720px){ .card{ min-height: unset; } }
+
+:root{
+  --bg0:#060922;
+  --bg1:#070b22;
+  --border: rgba(115,150,255,.20);
+  --border2: rgba(115,150,255,.30);
+  --text:#e9f1ff;
+  --shadow1: 0 18px 55px rgba(0,0,0,.50);
+  --shadow2: 0 10px 28px rgba(0,0,0,.34);
+  --glow: 0 0 0 3px rgba(58,167,255,.16);
+}
+body{
+  color: var(--text) !important;
+  background:
+    radial-gradient(900px 560px at 10% 0%, rgba(58,167,255,.16), transparent 60%),
+    radial-gradient(920px 600px at 90% 12%, rgba(125,247,200,.12), transparent 62%),
+    linear-gradient(180deg, var(--bg0) 0%, var(--bg1) 55%, var(--bg0) 100%) !important;
+}
+.app{
+  border-radius: 20px;
+  border: 1px solid var(--border2) !important;
+  background: linear-gradient(180deg, rgba(13,19,48,.86), rgba(8,12,34,.78)) !important;
+  box-shadow: var(--shadow1) !important;
+}
+.search{
+  background: linear-gradient(180deg, rgba(15,21,40,.86), rgba(8,12,34,.78)) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), var(--shadow2) !important;
+  border-radius: 16px;
+}
+.search input[type="text"]{
+  background: linear-gradient(180deg, rgba(9,16,50,.85), rgba(7,12,38,.82)) !important;
+  border: 1px solid rgba(115,150,255,.20) !important;
+  border-radius: 12px;
+}
+.search button{
+  background: linear-gradient(180deg, rgba(58,167,255,1), rgba(43,125,215,1)) !important;
+  border-radius: 14px;
+  box-shadow: 0 12px 26px rgba(58,167,255,.28) !important;
+}
+.result, .card{
+  background: linear-gradient(180deg, rgba(15,21,40,.84), rgba(8,12,34,.76)) !important;
+  border: 1px solid rgba(115,150,255,.18) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), var(--shadow2) !important;
+}
+.badge{ box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 10px 22px rgba(0,0,0,.22); }
+.badge.ok{ background: linear-gradient(180deg, rgba(125,247,200,.22), rgba(13,42,31,.92)); }
+.badge.ana{ background: linear-gradient(180deg, rgba(255,107,107,.22), rgba(43,17,21,.92)); }
+.badge.bra{ background: linear-gradient(180deg, rgba(199,178,255,.22), rgba(35,25,51,.92)); }
+.badge.nao{ background: linear-gradient(180deg, rgba(255,184,107,.20), rgba(42,26,13,.92)); }
+
+:where(button,.chip,input):focus-visible{ box-shadow: var(--glow) !important; }
+
+.app, .card{
+  background: rgba(13, 19, 48, 0.62) !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  box-shadow:
+    0 18px 55px rgba(0,0,0,.48),
+    inset 0 1px 0 rgba(255,255,255,.08) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.app::before, .card::before{
+  content: "";
+  position: absolute;
+  inset: -60% -40% auto -40%;
+  height: 140%;
+  background: radial-gradient(circle at top, rgba(255,255,255,.18), transparent 55%);
+  pointer-events: none;
+}
+
+.app::after, .card::after{
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid rgba(58,167,255,.14);
+  pointer-events: none;
+}
+
+.app{
+  background-image:
+    radial-gradient(260px 170px at 0% 0%, rgba(58,167,255,.20), transparent 62%),
+    radial-gradient(260px 170px at 100% 0%, rgba(125,247,200,.16), transparent 62%);
+  background-blend-mode: screen;
+}
+
+@media (prefers-reduced-motion: reduce){
+  .app, .card{ backdrop-filter: none !important; -webkit-backdrop-filter:none !important; }
+}
+
+/* =========================
+   DOWNLOAD APP CTA (acima do botão de bugs)
+   ========================= */
+.download-app{
+  position: fixed;
+  left: 12px;
+  bottom: 58px;
+  z-index: 999999;
+  pointer-events: auto;
+}
+
+.download-app a{
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  line-height: 1;
+  text-decoration: none;
+  color: #8fd3ff;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,.20), transparent 38%),
+    linear-gradient(180deg, rgba(15,21,40,.92), rgba(10,16,34,.96));
+  border: 1px solid rgba(78,136,255,.34);
+  box-shadow:
+    0 10px 26px rgba(0,0,0,.45),
+    inset 0 1px 0 rgba(255,255,255,.08),
+    0 0 0 1px rgba(58,167,255,.08);
+  position: relative;
+}
+
+.download-app a:hover{
+  transform: translateY(-1px);
+  box-shadow:
+    0 14px 30px rgba(0,0,0,.55),
+    inset 0 1px 0 rgba(255,255,255,.10),
+    0 0 20px rgba(58,167,255,.18);
+}
+
+.download-app a:active{
+  transform: translateY(0);
+}
+
+.download-app a::after{
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  font-size: 11px;
+  letter-spacing: .2px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(15,21,40,.95);
+  border: 1px solid rgba(33,43,75,.95);
+  color: #e9f1f7;
+  box-shadow: 0 12px 28px rgba(0,0,0,.55);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s ease, transform .15s ease;
+}
+
+.download-app a::before{
+  content: "";
+  position: absolute;
+  left: calc(100% + 4px);
+  top: 50%;
+  transform: translateY(-50%);
+  border: 6px solid transparent;
+  border-right-color: rgba(33,43,75,.95);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s ease;
+}
+
+.download-app a:hover::after,
+.download-app a:focus-visible::after{
+  opacity: 1;
+  transform: translateY(-50%) translateX(2px);
+}
+
+.download-app a:hover::before,
+.download-app a:focus-visible::before{
+  opacity: 1;
+}
+
+.download-icon{
+  width: 18px;
+  height: 18px;
+  display: block;
+  fill: currentColor;
+}
+
+.download-app a.is-pulsing{
+  animation: rbPulse 900ms ease-in-out 0s 3 alternate;
+  box-shadow:
+    0 12px 30px rgba(58,167,255,.38),
+    inset 0 1px 0 rgba(255,255,255,.10),
+    0 0 24px rgba(58,167,255,.20);
+}
+
+.download-bubble{
+  position: fixed;
+  left: 58px;
+  bottom: 62px;
+  z-index: 1000000;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  min-width: 290px;
+  max-width: 430px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  color: #eaf4ff;
+  background:
+    radial-gradient(circle at top left, rgba(87,163,255,.18), transparent 42%),
+    radial-gradient(circle at bottom right, rgba(125,247,200,.10), transparent 38%),
+    linear-gradient(180deg, rgba(11,18,44,.96), rgba(8,13,34,.98));
+  border: 1px solid rgba(82,138,255,.26);
+  box-shadow:
+    0 18px 42px rgba(0,0,0,.48),
+    inset 0 1px 0 rgba(255,255,255,.08),
+    0 0 0 1px rgba(58,167,255,.06);
+  opacity: 0;
+  transform: translateY(8px) scale(.985);
+  pointer-events: none;
+  transition: opacity .22s ease, transform .22s ease;
+}
+
+.download-bubble::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(125,247,200,.18), rgba(58,167,255,.24), rgba(255,255,255,.06));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.download-bubble.is-show{
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.download-bubble-icon{
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: #8fd3ff;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,.22), transparent 35%),
+    linear-gradient(180deg, rgba(18,48,88,.95), rgba(10,32,58,.95));
+  border: 1px solid rgba(93,168,255,.26);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.10),
+    0 0 24px rgba(58,167,255,.12);
+}
+
+.download-bubble-svg{
+  width: 18px;
+  height: 18px;
+  display: block;
+  fill: currentColor;
+}
+
+.download-bubble-content{
+  min-width: 0;
+}
+
+.download-bubble-title{
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  color: #f3f8ff;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.download-bubble-sub{
+  font-size: 12px;
+  line-height: 1.35;
+  color: #b8d6f8;
+}
+
+.download-bubble-action{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  text-decoration: none;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 700;
+  color: #02192d;
+  background: linear-gradient(180deg, #6fc2ff, #2e8fff);
+  border: 1px solid rgba(255,255,255,.18);
+  box-shadow: 0 10px 22px rgba(46,143,255,.28);
+}
+
+.download-bubble-action:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 14px 26px rgba(46,143,255,.32);
+}
+
+html[data-theme="light"] .download-app a{
+  color: #1f7aff;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,.70), transparent 42%),
+    linear-gradient(180deg, rgba(255,255,255,.96), rgba(245,248,255,.98));
+  border-color: rgba(20,35,65,.14);
+  box-shadow:
+    0 10px 26px rgba(16,24,40,.14),
+    inset 0 1px 0 rgba(255,255,255,.70);
+}
+
+html[data-theme="light"] .download-app a::after{
+  background: rgba(255,255,255,.96);
+  border-color: rgba(20,35,65,.14);
+  color: rgba(15,23,42,.92);
+  box-shadow: 0 14px 30px rgba(16,24,40,.14);
+}
+
+html[data-theme="light"] .download-app a::before{
+  border-right-color: rgba(20,35,65,.18);
+}
+
+html[data-theme="light"] .download-bubble{
+  color: #10233f;
+  background:
+    radial-gradient(circle at top left, rgba(31,122,255,.10), transparent 42%),
+    radial-gradient(circle at bottom right, rgba(24,185,129,.08), transparent 38%),
+    linear-gradient(180deg, rgba(255,255,255,.98), rgba(244,248,255,.98));
+  border-color: rgba(20,35,65,.12);
+  box-shadow:
+    0 18px 42px rgba(16,24,40,.12),
+    inset 0 1px 0 rgba(255,255,255,.70);
+}
+
+html[data-theme="light"] .download-bubble-title{
+  color: #0f172a;
+}
+
+html[data-theme="light"] .download-bubble-sub{
+  color: #4b5b74;
+}
+
+html[data-theme="light"] .download-bubble-icon{
+  color: #1f7aff;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,.85), transparent 40%),
+    linear-gradient(180deg, rgba(235,244,255,.96), rgba(223,238,255,.96));
+  border-color: rgba(31,122,255,.16);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.85),
+    0 0 20px rgba(31,122,255,.10);
+}
+
+@media (max-width: 720px){
+  .download-bubble{
+    left: 12px;
+    right: 12px;
+    bottom: 104px;
+    min-width: 0;
+    max-width: none;
+    grid-template-columns: auto 1fr;
+  }
+
+  .download-bubble-action{
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+
+
+
+/* =============================================================== */
+/* EFFECTS.CSS */
+/* =============================================================== */
+:root{
+  --w11-bg0:#05081b;
+  --w11-bg1:#070b22;
+
+
+  --gX: 0vw;
+  --gY: 0vh;
+  --gS: 1.02;
+  --gO: 0;
+  --hO: 0;
+}
+
+body{
+  background:
+    radial-gradient(1200px 700px at 50% 10%, rgba(255,255,255,.06), transparent 55%),
+    linear-gradient(180deg, var(--w11-bg0) 0%, var(--w11-bg1) 65%, var(--w11-bg0) 100%) !important;
+  background-attachment: fixed;
+  overflow-x: hidden;
+}
+
+body::before{
+  content:"";
+  position: fixed;
+  inset: -18%;
+  pointer-events:none;
+  z-index: -1;
+
+
+  background:
+    radial-gradient(520px 420px at 30% 34%, rgba(64,154,255,.75), transparent 62%),
+    radial-gradient(620px 520px at 58% 46%, rgba(20,105,255,.55), transparent 64%),
+    radial-gradient(780px 600px at 48% 62%, rgba(140,210,255,.35), transparent 68%),
+    radial-gradient(900px 700px at 52% 44%, rgba(15,70,210,.22), transparent 70%);
+
+  filter: blur(34px) saturate(128%);
+  mix-blend-mode: screen;
+
+  opacity: var(--gO);
+  transform: translate3d(var(--gX), var(--gY), 0) scale(var(--gS));
+  transform-origin: 50% 50%;
+
+
+  transition:
+    opacity 3.6s ease,
+    transform 11s cubic-bezier(.22, .9, .18, 1),
+    filter 7s ease;
+
+
+  animation: w11Breath 9.5s ease-in-out infinite;
+}
+
+body::after{
+  content:"";
+  position: fixed;
+  inset: -12%;
+  pointer-events:none;
+  z-index: -1;
+
+  background:
+    radial-gradient(1000px 780px at 48% 40%, rgba(80, 170, 255, .18), transparent 68%),
+    radial-gradient(900px 740px at 56% 52%, rgba(35, 120, 255, .12), transparent 70%);
+
+  filter: blur(18px);
+  opacity: var(--hO);
+  transform: translate3d(calc(var(--gX) * .55), calc(var(--gY) * .55), 0) scale(calc(var(--gS) * 1.01));
+
+  transition:
+    opacity 4.4s ease,
+    transform 13s cubic-bezier(.22, .9, .18, 1);
+
+  animation: w11Breath2 12.5s ease-in-out infinite;
+}
+
+@keyframes w11Breath{
+  0%,100%{ filter: blur(34px) saturate(126%); }
+  50%    { filter: blur(38px) saturate(132%); }
+}
+@keyframes w11Breath2{
+  0%,100%{ filter: blur(18px); }
+  50%    { filter: blur(20px); }
+}
+
+@media (prefers-reduced-motion: reduce){
+  body::before, body::after{
+    animation: none !important;
+    transition: none !important;
+    opacity: .75;
+    transform: none !important;
+  }
+}
+
+.suggest{ margin-top: 0 !important; }
+.result-suggest-wrap.is-open{ margin-top: 6px !important; }
+
+.card{
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 14px 34px rgba(0,0,0,.34) !important;
+}
+
+.search, .result{
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 12px 28px rgba(0,0,0,.30) !important;
+}
+
+.chip{
+  will-change: transform, opacity;
+  transform: translate3d(0,0,0);
+  backface-visibility: hidden;
+}
+
+.chip.is-highlight{ animation: none !important; }
+
+.chip.is-highlight,
+.chip.is-highlight:focus,
+.chip.is-highlight:focus-visible{
+  background: linear-gradient(180deg, var(--accent-2), #1fbf8d) !important;
+  color: #062016 !important;
+  border-color: #2de3b0 !important;
+  box-shadow:
+    0 0 0 3px rgba(125,247,200,.16),
+    0 10px 22px rgba(125,247,200,.16) !important;
+}
+
+.chip.is-highlight{ position: relative; z-index: 1; }
+.chip.is-highlight::after{
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 999px;
+  border: 2px solid rgba(125,247,200,.50);
+  opacity: 0;
+  transform: scale(.92);
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: no-preference){
+  @keyframes chipPulseSoft{
+    0%   { opacity: 0; transform: scale(.92); }
+    35%  { opacity: .70; }
+    100% { opacity: 0; transform: scale(1.10); }
+  }
+  .chip.is-highlight::after{ animation: chipPulseSoft 520ms ease-out 1; }
+}
+
+.result-suggest-wrap{
+  overflow: hidden !important;
+  height: 0;
+  max-height: none !important;
+  margin-top: 0;
+  transition: height .22s ease, margin-top .22s ease;
+  will-change: height;
+}
+.result-suggest-wrap.is-open{ margin-top: 12px; }
+
+.suggest{
+  will-change: transform, opacity;
+  transform: translate3d(0,0,0);
+}
+
+html.is-edge .app, html.is-edge .card{
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: rgba(13, 19, 48, 0.92) !important;
+}
+
+.app, .card { position: relative !important; }
+.app::before, .app::after,
+.card::before, .card::after { z-index: 0 !important; }
+.app > *, .card > * { position: relative; z-index: 1; }
+.result, .result * { position: relative; z-index: 2; }
+
+@media (prefers-reduced-motion: no-preference){
+  .chip{ transition: transform .18s ease, box-shadow .26s ease, background .26s ease !important; }
+  .search button{ transition: transform .10s ease, box-shadow .26s ease !important; }
+  .search{ transition: box-shadow .26s ease, border-color .26s ease !important; }
+  .suggest.anim-drop{ animation-duration: .28s !important; }
+  .result-suggest-wrap{ transition: height .34s ease, margin-top .34s ease !important; }
+  .chip.is-highlight::after{ animation-duration: .82s !important; }
+  .badge{ animation-duration: .26s, .70s !important; }
+  .report-bugs a.is-pulsing{ animation-duration: 1.15s !important; }
+}
+
+.chips{ overflow-x: hidden !important; }
+.chips-inner{ overflow-x: hidden; }
+
+.card h3{
+    margin-top: 0 !important;
+    margin-bottom: 12px !important;
+    padding: 0 !important;
+}
+
+.card{
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-items: stretch !important;
+}
+
+.chips{
+    margin-top: 0 !important;
+    padding-top: 10px !important;
+}
+
+.card h3{ margin:0 0 12px !important; padding:0 !important; }
+.card{ display:flex !important; flex-direction:column !important; justify-content:flex-start !important; align-items:stretch !important; }
+.chips{ margin-top:0 !important; padding-top:10px !important; }
+#chips-cob{ margin-top:0 !important; padding-top:10px !important; padding-bottom:10px !important; }
+
+:root{ --chips-fade-edge: 18px; }
+
+@supports ((-webkit-mask-image: linear-gradient(#000,#000)) or (mask-image: linear-gradient(#000,#000))) {
+  .chips{
+    -webkit-mask-image: linear-gradient(to bottom,
+      transparent 0px,
+      #000 var(--chips-fade-edge),
+      #000 calc(100% - var(--chips-fade-edge)),
+      transparent 100%
+    ) !important;
+    mask-image: linear-gradient(to bottom,
+      transparent 0px,
+      #000 var(--chips-fade-edge),
+      #000 calc(100% - var(--chips-fade-edge)),
+      transparent 100%
+    ) !important;
+    -webkit-mask-repeat: no-repeat !important;
+    mask-repeat: no-repeat !important;
+    -webkit-mask-size: 100% 100% !important;
+    mask-size: 100% 100% !important;
+  }
+}
+
+.chips{ scrollbar-width:none; -ms-overflow-style:none; }
+.chips::-webkit-scrollbar{ width:0; height:0; }
+.card{ position: relative !important; }
+.chips-scrollbar{
+  position:absolute;
+  right:10px;
+  top:44px;
+  width:10px;
+  border-radius:999px;
+  background: transparent;
+  border:none;
+  box-shadow:none;
+
+  opacity:0;
+  transform: translateX(4px);
+
+  pointer-events:none;
+  z-index:20;
+
+  transition:
+    opacity .22s ease,
+    transform .22s ease;
+}
+.chips-scrollbar .thumb{
+  position:absolute;
+  left:3px;
+  right:3px;
+  top:0;
+  height:28px;
+  border-radius:999px;
+
+  background: rgba(76,194,255,.55);
+
+  box-shadow:
+    0 8px 18px rgba(0,0,0,.22),
+    inset 0 1px 0 rgba(255,255,255,.12);
+
+  transition:
+    opacity .22s ease,
+    background .18s ease,
+    top .12s ease,
+    height .12s ease;
+}
+.chips-scrollbar:hover .thumb{ background: rgba(76,194,255,.70); }
+.chips-scrollbar.is-hidden{ display:none; }
+@media (prefers-reduced-motion: no-preference){
+  .chips-scrollbar .thumb{ transition: background .18s ease, top .12s ease, height .12s ease; }
+}
+
+.search .field{ position: relative; display:block; }
+.search .field input[type="text"]{ padding-right: 54px !important; }
+.copy-btn{
+  position:absolute; right:12px; top:50%; transform: translateY(-50%);
+  width:36px; height:28px; border-radius:10px;
+  border:1px solid rgba(115,150,255,.22);
+  background: rgba(255,255,255,.92);
+  color:#0b1020;
+  display:inline-flex; align-items:center; justify-content:center;
+  cursor:pointer; user-select:none;
+  box-shadow:0 10px 22px rgba(0,0,0,.20);
+  -webkit-tap-highlight-color: transparent;
+}
+.copy-btn:hover{ background: rgba(255,255,255,.98); transform: translateY(-50%) translateY(-1px); }
+.copy-btn:active{ transform: translateY(-50%); box-shadow:0 8px 16px rgba(0,0,0,.18); }
+.copy-btn:focus-visible{ outline:none; box-shadow: 0 0 0 3px rgba(58,167,255,.22), 0 10px 22px rgba(0,0,0,.20); }
+.copy-btn.is-copied{ background: rgba(125,247,200,.92); border-color: rgba(45,227,176,.65); }
+
+.search .copy-btn{
+  transform: translateY(-50%) !important;
+  transition: transform .12s ease, box-shadow .18s ease, background .18s ease !important;
+}
+.search .copy-btn:hover{ transform: translateY(-50%) translateY(-1px) !important; }
+.search .copy-btn:active{ transform: translateY(-50%) !important; }
+
+.theme-toggle{
+  position: fixed;
+  left: 12px;
+  top: 12px;
+  z-index: 999999;
+  pointer-events: auto;
+}
+.theme-btn{
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(15,21,40,.85);
+  border: 1px solid rgba(33,43,75,.95);
+  box-shadow: 0 10px 26px rgba(0,0,0,.45);
+  color: var(--accent);
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.theme-btn:hover{ transform: translateY(-1px); box-shadow: 0 14px 30px rgba(0,0,0,.55); }
+.theme-btn:active{ transform: translateY(0); }
+
+.theme-btn{ position: relative; }
+.theme-btn::after{
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  font-size: 11px;
+  letter-spacing: .2px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(15,21,40,.95);
+  border: 1px solid rgba(33,43,75,.95);
+  color: #e9f1f7;
+  box-shadow: 0 12px 28px rgba(0,0,0,.55);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s ease, transform .15s ease;
+}
+.theme-btn::before{
+  content: "";
+  position: absolute;
+  left: calc(100% + 4px);
+  top: 50%;
+  transform: translateY(-50%);
+  border: 6px solid transparent;
+  border-right-color: rgba(33,43,75,.95);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s ease;
+}
+.theme-btn:hover::after,
+.theme-btn:focus-visible::after{ opacity: 1; transform: translateY(-50%) translateX(2px); }
+.theme-btn:hover::before,
+.theme-btn:focus-visible::before{ opacity: 1; }
+
+.theme-icon{ width: 20px; height: 20px; display: block; fill: currentColor; }
+
+.theme-btn.is-pulsing{
+  animation: rbPulse 900ms ease-in-out 0s 1 alternate;
+  box-shadow: 0 12px 30px rgba(76,194,255,.35);
+}
+
+@media (prefers-reduced-motion: no-preference){
+  body, .app, .search, .result, .card, .chip, .suggest, .report-bugs a, .theme-btn{
+    transition: background-color .22s ease, color .22s ease, border-color .22s ease, box-shadow .22s ease, filter .22s ease;
+  }
+}
+
+html[data-theme="light"]{ color-scheme: light; }
+
+html[data-theme="light"]:root{
+  --bg:#f3f6fb;
+  --bg-solid:#f3f6fb;
+  --card:#ffffff;
+  --panel: rgba(255,255,255,.72);
+  --panel-2: rgba(255,255,255,.62);
+  --border: rgba(20,35,65,.12);
+  --border2: rgba(20,35,65,.16);
+  --text:#0f172a;
+  --muted:#4b5b74;
+  --accent:#1f7aff;
+  --accent-2:#18b981;
+  --ring: rgba(31,122,255,.45);
+  --danger:#d92d20;
+  --warn:#f79009;
+  --shadow1: 0 18px 55px rgba(16,24,40,.12);
+  --shadow2: 0 10px 28px rgba(16,24,40,.10);
+}
+
+html[data-theme="light"] body{
+  color: var(--text) !important;
+  background:
+    radial-gradient(900px 560px at 10% 0%, rgba(31,122,255,.14), transparent 60%),
+    radial-gradient(920px 600px at 90% 12%, rgba(24,185,129,.10), transparent 62%),
+    linear-gradient(180deg, #ffffff 0%, #f3f6fb 55%, #ffffff 100%) !important;
+}
+
+html[data-theme="light"] body::before{
+  mix-blend-mode: normal !important;
+  opacity: calc(var(--gO) * 0.85) !important;
+  filter: blur(34px) saturate(160%) !important;
+}
+html[data-theme="light"] body::after{
+  mix-blend-mode: normal !important;
+  opacity: calc(var(--hO) * 0.90) !important;
+  filter: blur(18px) saturate(145%) !important;
+}
+
+html[data-theme="light"] .app{
+  background: var(--panel) !important;
+  border: 1px solid var(--border2) !important;
+  box-shadow: var(--shadow1) !important;
+}
+html[data-theme="light"] .search,
+html[data-theme="light"] .result,
+html[data-theme="light"] .card{
+  background: var(--panel-2) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow2) !important;
+}
+
+html[data-theme="light"] .search input[type="text"]{
+  background: rgba(255,255,255,.82) !important;
+  border: 1px solid rgba(20,35,65,.14) !important;
+  color: var(--text) !important;
+}
+html[data-theme="light"] .search input[type="text"]::placeholder{ color: rgba(75,91,116,.72) !important; }
+
+html[data-theme="light"] .copy-btn{
+  background: rgba(255,255,255,.92) !important;
+  border: 1px solid rgba(20,35,65,.18) !important;
+  color:#0b1020 !important;
+}
+html[data-theme="light"] .copy-btn.is-copied{ background: rgba(24,185,129,.22) !important; border-color: rgba(24,185,129,.40) !important; }
+
+html[data-theme="light"] .badge{ box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 8px 18px rgba(16,24,40,.08) !important; }
+html[data-theme="light"] .badge.ok{ background: rgba(24,185,129,.16) !important; color: #0b3b2b !important; border-color: rgba(24,185,129,.30) !important; }
+html[data-theme="light"] .badge.ana{ background: rgba(217,45,32,.12) !important; color: #6b1010 !important; border-color: rgba(217,45,32,.26) !important; }
+html[data-theme="light"] .badge.bra{ background: rgba(124,58,237,.12) !important; color: #2f145d !important; border-color: rgba(124,58,237,.24) !important; }
+html[data-theme="light"] .badge.nao{ background: rgba(247,144,9,.14) !important; color: #5a2f00 !important; border-color: rgba(247,144,9,.28) !important; }
+
+html[data-theme="light"] .chip{
+  background: rgba(255,255,255,.86) !important;
+  border: 1px solid rgba(20,35,65,.14) !important;
+  color: rgba(15,23,42,.92) !important;
+}
+html[data-theme="light"] .chip:hover{ background: rgba(31,122,255,.08) !important; border-color: rgba(31,122,255,.20) !important; }
+
+html[data-theme="light"] .chip.is-highlight,
+html[data-theme="light"] .chip.is-highlight:focus,
+html[data-theme="light"] .chip.is-highlight:focus-visible{
+  background: linear-gradient(180deg, rgba(24,185,129,.95), rgba(20,160,112,.95)) !important;
+  color: #052016 !important;
+  border-color: rgba(24,185,129,.85) !important;
+  box-shadow: 0 0 0 4px rgba(24,185,129,.28), 0 14px 34px rgba(24,185,129,.22) !important;
+}
+
+html[data-theme="light"] .card h3{ color: rgba(31,122,255,.92) !important; }
+html[data-theme="light"] .hint,
+html[data-theme="light"] footer{ color: rgba(75,91,116,.92) !important; }
+
+html[data-theme="light"] .suggest{
+  background-color: #dff6f0 !important;
+  background-image: linear-gradient(180deg, #ebfbf6, #dff6f0) !important;
+  border-color: rgba(16,185,129,.22) !important;
+  color: #0b3b2b !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  background-clip: padding-box !important;
+  -webkit-background-clip: padding-box !important;
+  -webkit-mask-image: -webkit-radial-gradient(white, black) !important;
+}
+html[data-theme="light"] .suggest .sug-title{ color: #0b3b2b !important; }
+html[data-theme="light"] .suggest .sug-sub{ color: rgba(11,59,43,.80) !important; }
+html[data-theme="light"] .suggest .sug-pill{ background: rgba(255,255,255,.86) !important; border-color: rgba(16,185,129,.22) !important; color:#0b3b2b !important; }
+html[data-theme="light"] .suggest .sug-pill:hover{ background: rgba(16,185,129,.10) !important; }
+
+html[data-theme="light"] .chips-scrollbar .thumb{ background: rgba(31,122,255,.38) !important; }
+html[data-theme="light"] .chips-scrollbar:hover .thumb{ background: rgba(31,122,255,.52) !important; }
+
+html[data-theme="light"] .report-bugs a,
+html[data-theme="light"] .theme-btn{
+  background: rgba(255,255,255,.92) !important;
+  border-color: rgba(20,35,65,.14) !important;
+  box-shadow: 0 10px 26px rgba(16,24,40,.14) !important;
+}
+html[data-theme="light"] .report-bugs a::after,
+html[data-theme="light"] .theme-btn::after{
+  background: rgba(15,21,40,.95) !important;
+  border-color: rgba(33,43,75,.95) !important;
+  color: #e9f1f7 !important;
+}
+
+.report-bugs a, .theme-btn{ display:grid !important; place-items:center !important; line-height:0 !important; }
+.report-bugs a svg, .theme-btn svg{ display:block !important; }
+
+:root{
+  --tt-font-size: 11px;
+  --tt-pad-y: 4px;
+  --tt-pad-x: 10px;
+  --tt-radius: 999px;
+  --tt-border: 1px;
+  --tt-shadow: 0 10px 22px rgba(0,0,0,.45);
+}
+
+.report-bugs a::after,
+.theme-btn::after{
+  font-size: var(--tt-font-size) !important;
+  padding: var(--tt-pad-y) var(--tt-pad-x) !important;
+  border-radius: var(--tt-radius) !important;
+  border-width: var(--tt-border) !important;
+  box-shadow: var(--tt-shadow) !important;
+  line-height: 1.05 !important;
+  font-weight: 650 !important;
+}
+
+.report-bugs a::before,
+.theme-btn::before{
+  border-width: 6px !important;
+}
+
+html[data-theme="light"] .report-bugs a::after,
+html[data-theme="light"] .theme-btn::after{
+  background: rgba(255,255,255,.96) !important;
+  border-color: rgba(20,35,65,.14) !important;
+  color: rgba(15,23,42,.92) !important;
+  box-shadow: 0 14px 30px rgba(16,24,40,.14) !important;
+}
+
+html[data-theme="light"] .report-bugs a::before,
+html[data-theme="light"] .theme-btn::before{
+  border-right-color: rgba(20,35,65,.18) !important;
+  filter: drop-shadow(0 10px 18px rgba(16,24,40,.10));
+}
+
+.theme-btn.is-pulsing{
+  animation: none !important;
+}
+
+html[data-theme="light"] .chip.is-highlight::after{
+  border-color: rgba(24,185,129,.88) !important;
+}
+@media (prefers-reduced-motion: no-preference){
+  @keyframes chipPulseSoftLight{
+    0%   { opacity: 0;   transform: scale(.92); }
+    35%  { opacity: .90; }
+    100% { opacity: 0;   transform: scale(1.10); }
+  }
+  html[data-theme="light"] .chip.is-highlight::after{
+    animation: chipPulseSoftLight 820ms ease-out 1 !important;
+  }
+}
+
+html[data-theme="light"] .result{
+  background: #ffffff !important;
+  border-color: rgba(15,23,42,.08) !important;
+  box-shadow: 0 10px 24px rgba(16,24,40,.10) !important;
+}
+
+html[data-theme="light"] .badge{
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.70), 0 10px 20px rgba(16,24,40,.10) !important;
+}
+
+.sr-only{
+  position:absolute !important;
+  width:1px !important;
+  height:1px !important;
+  padding:0 !important;
+  margin:-1px !important;
+  overflow:hidden !important;
+  clip:rect(0,0,0,0) !important;
+  white-space:nowrap !important;
+  border:0 !important;
+}
+
+.report-bugs a{
+  border-color: rgba(22, 30, 58, .98) !important;
+}
+html[data-theme="light"] .report-bugs a{
+  border-color: rgba(15, 23, 42, .22) !important;
+}
+
+.credit{
+  color: #86a0b6 !important;
+}
+html[data-theme="light"] .credit{
+  color: rgba(55, 70, 95, .82) !important;
+}
+
+.suggest .sug-actions .sug-pill.ok{
+  background: #0d2a1f !important;
+  border-color: #184c39 !important;
+  color: #7df7c8 !important;
+}
+.suggest .sug-actions .sug-pill.bra{
+  background: #231933 !important;
+  border-color: #3b2b6b !important;
+  color: #c7b2ff !important;
+}
+.suggest .sug-actions .sug-pill.ana{
+  background: #2b1115 !important;
+  border-color: #5b2a30 !important;
+  color: #ffb3bd !important;
+}
+
+.suggest .sug-actions .sug-pill.nao{
+  background: #0e241f !important;
+  border-color: rgba(27,74,61,.55) !important;
+  color: inherit !important;
+}
+
+.suggest .sug-actions .sug-pill.ok:hover{ background: color-mix(in oklab, #0d2a1f, white 6%) !important; }
+.suggest .sug-actions .sug-pill.bra:hover{ background: color-mix(in oklab, #231933, white 6%) !important; }
+.suggest .sug-actions .sug-pill.ana:hover{ background: color-mix(in oklab, #2b1115, white 6%) !important; }
+
+html[data-theme="light"] .suggest .sug-actions .sug-pill.ok{
+  background: rgba(24,185,129,.16) !important;
+  border-color: rgba(24,185,129,.30) !important;
+  color: #0b3b2b !important;
+}
+html[data-theme="light"] .suggest .sug-actions .sug-pill.bra{
+  background: rgba(124,58,237,.12) !important;
+  border-color: rgba(124,58,237,.24) !important;
+  color: #2f145d !important;
+}
+html[data-theme="light"] .suggest .sug-actions .sug-pill.ana{
+  background: rgba(217,45,32,.12) !important;
+  border-color: rgba(217,45,32,.26) !important;
+  color: #6b1010 !important;
+}
+
+.card:hover .chips-scrollbar,
+.card.is-scrolling .chips-scrollbar{
+  opacity:1;
+  transform: translateX(0);
+  pointer-events:auto;
+}
+
+html.perf-lite .app,
+html.perf-lite .card{
+
+  -webkit-backdrop-filter: saturate(110%) blur(6px) !important;
+  backdrop-filter: saturate(110%) blur(6px) !important;
+
+
+  box-shadow:
+    0 16px 46px rgba(0,0,0,.46),
+    inset 0 1px 0 rgba(255,255,255,.07) !important;
+}
+
+html.perf-lite body::before{
+  filter: blur(24px) saturate(122%) !important;
+  opacity: calc(var(--gO) * 0.88) !important;
+}
+html.perf-lite body::after{
+  filter: blur(14px) !important;
+  opacity: calc(var(--hO) * 0.90) !important;
+}
+
+html.perf-lite body::before,
+html.perf-lite body::after{
+  animation-duration: 18s !important;
+}
+
+html.perf-lite .chip,
+html.perf-lite .search,
+html.perf-lite .result,
+html.perf-lite .card,
+html.perf-lite .suggest{
+  transition-duration: .18s !important;
+}
+
+html.perf-lite .result-suggest-wrap{
+  transition: height .26s ease, margin-top .26s ease !important;
+}
+
+html.perf-lite .chip,
+html.perf-lite .suggest{
+  will-change: auto !important;
+}
+
+
+/* =============================================================== */
+/* ESTILOS EXTRAS - SEPARADOR DAS CATEGORIAS */
+/* =============================================================== */
+
+/* Separadores visuais removidos a pedido do usuário */
+.category-divider{display:none !important;}
+</style>
+</head>
+<body>
+  <!-- DOWNLOAD APP CTA -->
+  <div class="download-app" id="downloadApp">
+    <a id="downloadAppBtn"
+       href="https://redeproaprendiz-my.sharepoint.com/:u:/g/personal/isaac_chaves_renapsi_org_br/IQCI1YC9MR_QR6D3bgPFnsRbAQhCRsxBwBEdAvvSZhLR7rw?e=QxuuWW" target="_blank" rel="noopener noreferrer"
+      
+       data-tooltip="Baixar app para Windows"
+       aria-label="Baixar app para Windows">
+      <svg class="download-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v8.59l2.3-2.29a1 1 0 1 1 1.4 1.41l-4 3.99a1 1 0 0 1-1.4 0l-4-3.99a1 1 0 1 1 1.4-1.41L11 12.59V4a1 1 0 0 1 1-1zm-6 16a1 1 0 0 1 0-2h12a1 1 0 1 1 0 2z"/>
+      </svg>
+    </a>
+  </div>
+
+  <div class="report-bugs" id="reportBugs">
+    <a href="https://teams.microsoft.com/l/chat/0/0?users=isaac.chaves@renapsi.org.br"
+       target="_blank" rel="noopener noreferrer" data-tooltip="Reportar bugs" aria-label="Reportar bug no Teams">
+      <svg class="bug-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path fill="currentColor" d="M12 19q1.65 0 2.825-1.175T16 15v-4q0-1.65-1.175-2.825T12 7q-1.65 0-2.825 1.175T8 11v4q0 1.65 1.175 2.825T12 19m-1.692-3.5h3.384v-1h-3.384zm0-4h3.384v-1h-3.384zM12 20q-1.356 0-2.493-.665q-1.138-.666-1.822-1.835H5v-1h2.254q-.229-.73-.241-1.49Q7 14.25 7 13.5H5v-1h2q0-.77-.007-1.529q-.006-.76.26-1.471H5v-1h2.685q.369-.652.912-1.162q.543-.51 1.234-.826L8.038 4.708l.67-.67l2.111 2.112q.585-.167 1.175-.167q.59 0 1.175.167l2.162-2.112l.669.67l-1.804 1.804q.69.317 1.22.824q.53.506.9 1.164H19v1h-2.254q.267.712.26 1.471Q17 11.731 17 12.5h2v1h-2q0 .75-.012 1.51q-.013.76-.242 1.49H19v1h-2.685q-.684 1.17-1.822 1.835Q13.356 20 12 20"/>
+      </svg>
+    </a>
+  </div>
+
+  
+
+<!-- Botão de alternar tema (placeholder) -->
+<div class="theme-toggle" id="themeToggle">
+  <button id="themeBtn" type="button" class="theme-btn"
+    aria-label="Alternar tema" data-tooltip="Alternar tema">
+    <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <!-- ícone sol/lua (placeholder) -->
+      <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>
+    </svg>
+  </button>
+</div>
+<main class="app">
+    <header>
+      <h1>Pesquisa de Abrangência</h1>
+    </header>
+
+    <section class="search" role="search">
+      <div class="field">
+      <label class="sr-only" for="q">Pesquisar município</label>
+      <input id="q" type="text" placeholder="Cole aqui: ex. 'SEDS - SEC MUN ASSISTENCIA SOCIAL - CIDADE OCIDENTAL'" aria-label="Pesquisar município" />
+      <button id="copyBtn" type="button" class="copy-btn" aria-label="Colar da área de transferência" title="Colar da área de transferência">📋</button>
+    </div>
+</section>
+
+    <section id="out" class="result" aria-live="polite" aria-atomic="true">
+      <div class="hint">Cole ou digite um texto contendo a cidade.</div>
+    </section>
+
+    <section id="outSuggest" class="result-suggest-wrap" aria-live="polite" aria-atomic="true"></section>
+
+    <section class="grid" aria-label="Listas rápidas">
+      <!-- _______________________________________________________________ -->
+      <!-- CATEGORIA: NÚCLEOS ANÁPOLIS -->
+      <!-- _______________________________________________________________ -->
+      <div class="card">
+        <h3>Núcleos Anápolis</h3>
+        <div class="chips" id="chips-ana"></div>
+      </div>
+
+      <!-- _______________________________________________________________ -->
+      <!-- CATEGORIA: NÚCLEOS BRASÍLIA -->
+      <!-- _______________________________________________________________ -->
+      <div class="card">
+        <h3>Núcleos Brasília</h3>
+        <div class="chips" id="chips-bra"></div>
+      </div>
+
+      <!-- _______________________________________________________________ -->
+      <!-- CATEGORIA: NOSSA ABRANGÊNCIA -->
+      <!-- _______________________________________________________________ -->
+      <div class="card">
+        <h3>Nossa Abrangência</h3>
+        <div class="chips" id="chips-cob"></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="credit" id="credit">
+    <span class="credit-main" id="creditMain">V13.5 | 10-04-2026 | By Renapsi</span>
+  </div>
+
+
+
+
+
+
+
+  <script>
+/* =============================================================== */
+/* ASSETS/JS/DATA.JS */
+/* =============================================================== */
+// ====== DADOS (listas) ======
+
+// Núcleo Anápolis
+const anapolis = [
+  'Anápolis',
+  'Barro Alto',
+  'Campo Limpo de Goiás',
+  'Carmo do Rio Verde',
+  'Ceres',
+  'Goianápolis',
+  'Goianésia',
+  'Guaraíta',
+  'Guarinos',
+  'Hidrolina',
+  'Ipiranga de Goiás',
+  'Itapaci',
+  'Itapuranga',
+  'Jaraguá',
+  'Morro Agudo de Goiás',
+  'Nova América',
+  'Nova Glória',
+  'Pilar de Goiás',
+  'Rialma',
+  'Rianápolis',
+  'Rubiataba',
+  'Santa Isabel',
+  'Santa Rita do Novo Destino',
+  'São Luiz do Norte',
+  'São Miguel do Araguaia',
+  'São Patrício',
+  'Uruaçu',
+  'Uruana',
+  'Vila Propício'
+];
+
+// Núcleo Brasília
+const brasilia = [
+  'Abadiânia',
+  'Água Fria de Goiás',
+  'Águas Lindas de Goiás',
+  'Alexânia',
+  'Cabeceiras',
+  'Cidade Ocidental',
+  'Cocalzinho de Goiás',
+  'Corumbá de Goiás',
+  'Cristalina',
+  'Formosa',
+  'Luziânia',
+  'Mimoso de Goiás',
+  'Novo Gama',
+  'Padre Bernardo',
+  'Pirenópolis',
+  'Planaltina',
+  'Santo Antônio do Descoberto',
+  'Valparaíso de Goiás',
+  'Vila Boa'
+];
+
+// Nossa abrangência = todas as cidades de Goiás, exceto as citadas nos outros núcleos
+const cobertura = [
+  'Abadia de Goiás',
+  'Acreúna',
+  'Adelândia',
+  'Água Limpa',
+  'Aloândia',
+  'Alto Horizonte',
+  'Alto Paraíso de Goiás',
+  'Alvorada do Norte',
+  'Amaralina',
+  'Americano do Brasil',
+  'Amorinópolis',
+  'Anhanguera',
+  'Anicuns',
+  'Aparecida de Goiânia',
+  'Aparecida do Rio Doce',
+  'Aporé',
+  'Araçu',
+  'Aragarças',
+  'Aragoiânia',
+  'Araguapaz',
+  'Arenópolis',
+  'Aruanã',
+  'Aurilândia',
+  'Avelinópolis',
+  'Baliza',
+  'Bela Vista de Goiás',
+  'Bom Jardim de Goiás',
+  'Bom Jesus de Goiás',
+  'Bonfinópolis',
+  'Bonópolis',
+  'Brazabrantes',
+  'Britânia',
+  'Buriti Alegre',
+  'Buriti de Goiás',
+  'Buritinópolis',
+  'Cachoeira Alta',
+  'Cachoeira de Goiás',
+  'Cachoeira Dourada',
+  'Caçu',
+  'Caiapônia',
+  'Caldas Novas',
+  'Caldazinha',
+  'Campestre de Goiás',
+  'Campinaçu',
+  'Campinorte',
+  'Campo Alegre de Goiás',
+  'Campos Belos',
+  'Campos Verdes',
+  'Castelândia',
+  'Catalão',
+  'Caturaí',
+  'Cavalcante',
+  'Cezarina',
+  'Chapadão do Céu',
+  'Colinas do Sul',
+  'Córrego do Ouro',
+  'Corumbaíba',
+  'Cristianópolis',
+  'Crixás',
+  'Cromínia',
+  'Cumari',
+  'Damianópolis',
+  'Damolândia',
+  'Davinópolis',
+  'Diorama',
+  'Divinópolis de Goiás',
+  'Doverlândia',
+  'Edealina',
+  'Edéia',
+  'Estrela do Norte',
+  'Faina',
+  'Fazenda Nova',
+  'Firminópolis',
+  'Flores de Goiás',
+  'Formoso',
+  'Gameleira de Goiás',
+  'Goiandira',
+  'Goiânia',
+  'Goianira',
+  'Goiás',
+  'Goiatuba',
+  'Gouvelândia',
+  'Guapó',
+  'Guarani de Goiás',
+  'Heitoraí',
+  'Hidrolândia',
+  'Iaciara',
+  'Inaciolândia',
+  'Indiara',
+  'Inhumas',
+  'Ipameri',
+  'Iporá',
+  'Israelândia',
+  'Itaberaí',
+  'Itaguari',
+  'Itaguaru',
+  'Itajá',
+  'Itapirapuã',
+  'Itarumã',
+  'Itauçu',
+  'Itumbiara',
+  'Ivolândia',
+  'Jandaia',
+  'Jataí',
+  'Jaupaci',
+  'Jesúpolis',
+  'Joviânia',
+  'Jussara',
+  'Lagoa Santa',
+  'Leopoldo de Bulhões',
+  'Mairipotaba',
+  'Mambaí',
+  'Mara Rosa',
+  'Marzagão',
+  'Matrinchã',
+  'Maurilândia',
+  'Minaçu',
+  'Mineiros',
+  'Moiporá',
+  'Monte Alegre de Goiás',
+  'Montes Claros de Goiás',
+  'Montividiu',
+  'Montividiu do Norte',
+  'Morrinhos',
+  'Mossâmedes',
+  'Mozarlândia',
+  'Mundo Novo',
+  'Mutunópolis',
+  'Nazário',
+  'Nerópolis',
+  'Niquelândia',
+  'Nova Aurora',
+  'Nova Crixás',
+  'Nova Iguaçu de Goiás',
+  'Nova Roma',
+  'Nova Veneza',
+  'Novo Brasil',
+  'Novo Planalto',
+  'Orizona',
+  'Ouro Verde de Goiás',
+  'Ouvidor',
+  'Palestina de Goiás',
+  'Palmeiras de Goiás',
+  'Palmelo',
+  'Palminópolis',
+  'Panamá',
+  'Paranaiguara',
+  'Paraúna',
+  'Perolândia',
+  'Petrolina de Goiás',
+  'Piracanjuba',
+  'Piranhas',
+  'Pires do Rio',
+  'Pontalina',
+  'Porangatu',
+  'Porteirão',
+  'Portelândia',
+  'Posse',
+  'Professor Jamil',
+  'Quirinópolis',
+  'Rio Quente',
+  'Rio Verde',
+  'Sanclerlândia',
+  'Santa Bárbara de Goiás',
+  'Santa Cruz de Goiás',
+  'Santa Fé de Goiás',
+  'Santa Helena de Goiás',
+  'Santa Rita do Araguaia',
+  'Santa Rosa de Goiás',
+  'Santa Tereza de Goiás',
+  'Santa Terezinha de Goiás',
+  'Santo Antônio da Barra',
+  'Santo Antônio de Goiás',
+  'São Domingos',
+  'São Francisco de Goiás',
+  'São João da Paraúna',
+  "São João d'Aliança",
+  'São Luís de Montes Belos',
+  'São Miguel do Passa Quatro',
+  'São Simão',
+  'Senador Canedo',
+  'Serranópolis',
+  'Silvânia',
+  'Simolândia',
+  "Sítio d'Abadia",
+  'Taquaral de Goiás',
+  'Teresina de Goiás',
+  'Terezópolis de Goiás',
+  'Três Ranchos',
+  'Trindade',
+  'Trombas',
+  'Turvânia',
+  'Turvelândia',
+  'Uirapuru',
+  'Urutaí',
+  'Varjão',
+  'Vianópolis',
+  'Vicentinópolis'
+];
+
+  </script>
+
+  <script>
+/* =============================================================== */
+/* ASSETS/JS/UTILS.JS */
+/* =============================================================== */
+// ====== NORMALIZAÇÃO / PARSING ======
+// Normalização (remove acentos, caixa e espaços extras)
+    const normalize = (s) => String(s)
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+
+
+
+
+// Escapa HTML (para manter render via innerHTML sem risco)
+function escapeHtml(s){
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+// Extrai cidade após o último traço (-, –, —); se houver '/', ignora o sufixo.
+    function extractCity(raw) {
+  if (!raw) return '';
+  const dashes = ['-', '–', '—'];
+  let part = String(raw);
+  let lastIdx = -1; let dashLen = 0;
+  for (const d of dashes) {
+    const i = part.lastIndexOf(d);
+    if (i > lastIdx) { lastIdx = i; dashLen = d.length; }
+  }
+  if (lastIdx !== -1) part = part.slice(lastIdx + dashLen);
+  const slashIdx = part.indexOf('/');
+  if (slashIdx !== -1) part = part.slice(0, slashIdx);
+  // Remove pontuação apenas nas pontas (compatível): mantém letras com acentos latinos, números e espaços.
+  part = part
+    .replace(/^[^0-9A-Za-zÀ-ÿ]+/g, '')
+    .replace(/[^0-9A-Za-zÀ-ÿ\s]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  part = part.replace(/[<>]/g, '');
+  return part;
+}
+
+// Distância de Levenshtein (para sugestões)
+    function levenshtein(a, b) {
+      const m = a.length, n = b.length;
+      if (!m) return n; if (!n) return m;
+      const dp = Array.from({length: m + 1}, () => Array(n + 1).fill(0));
+      for (let i = 0; i <= m; i++) dp[i][0] = i;
+      for (let j = 0; j <= n; j++) dp[0][j] = j;
+      for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+          const cost = a[i-1] === b[j-1] ? 0 : 1;
+          dp[i][j] = Math.min(
+            dp[i-1][j] + 1,
+            dp[i][j-1] + 1,
+            dp[i-1][j-1] + cost
+          );
+        }
+      }
+      return dp[m][n];
+    }
+
+  </script>
+
+  <script>
+/* =============================================================== */
+/* ASSETS/JS/SEARCH-ENGINE.JS */
+/* =============================================================== */
+// Conjuntos normalizados
+    const setAna = new Set(anapolis.map(normalize));
+    const setBra = new Set(brasilia.map(normalize));
+    const setCob = new Set(cobertura.map(normalize));
+
+    // Mapa normalizado -> original (todas as listas)
+    const allCities = [...anapolis, ...brasilia, ...cobertura];
+    const normToOriginal = new Map(allCities.map(c => [normalize(c), c]));
+// Aliases manuais desativados (IA local faz sugestões)
+const aliases = new Map();
+
+// Aliases dinâmicos (aprendizado local) — usado SOMENTE para sugestão (não aplica automaticamente)
+const dynamicAliases = (()=>{
+  try{
+    const obj = JSON.parse(localStorage.getItem('aliases') || '{}');
+    return new Map(Object.entries(obj));
+  }catch(e){
+    return new Map();
+  }
+})();
+
+function rememberAlias(fromRaw, toCityText){
+  const k = iaNormalizeInput(fromRaw);
+  if(!k || !toCityText) return;
+  dynamicAliases.set(k, normalize(toCityText));
+  try{ localStorage.setItem('aliases', JSON.stringify(Object.fromEntries(dynamicAliases))); }catch(e){}
+}
+
+// =========================
+// IA_DYNAMIC_ALIASES_INTEGRATION_V1
+// - Usa aliases aprendidos (localStorage) para PRIORIZAR sugestões
+// - NÃO aplica automaticamente (usuário continua escolhendo)
+// =========================
+function getDynamicAliasSuggestion(rawInput, extractedCity){
+  try{
+    const keys = [iaNormalizeInput(rawInput), iaNormalizeInput(extractedCity)];
+    for (const k of keys){
+      if(!k) continue;
+      const mapped = dynamicAliases.get(k);
+      if(!mapped) continue;
+
+      const cityText =
+        normToOriginal.get(mapped) ||
+        normToOriginal.get(normalize(mapped));
+
+      if(cityText) return cityText;
+    }
+  } catch(e){}
+  return null;
+}
+    
+// ====== SUGESTÕES / DISTÂNCIA ======
+function topSuggestions(v, limit = 2) {
+  if (!v) return [];
+  const all = [...anapolis, ...brasilia, ...cobertura];
+  const allN = all.map(normalize);
+  const scored = [];
+  for (let i = 0; i < allN.length; i++) {
+    const n = allN[i];
+    let score;
+    if (n.startsWith(v)) score = 0;
+    else if (n.includes(v)) score = 1;
+    else score = levenshtein(v, n) + 2;
+    scored.push({ s: all[i], n, score });
+  }
+  scored.sort((a, b) => a.score - b.score);
+  const thr = v.length <= 6 ? 2 : v.length <= 12 ? 3 : 4;
+  const picks = [];
+  for (const it of scored) {
+    if (picks.length >= limit) break;
+    const ok = (it.score <= 1) || ((it.score - 2) <= thr);
+    if (ok) {
+      if (!picks.find(p => normalize(p) === it.n)) picks.push(it.s);
+    }
+  }
+  return picks;
+}
+
+    
+// ====== IA LOCAL (afiada): sugere 1 quando óbvio, senão 3 ======
+const IA_STOPWORDS = new Set(['de','do','da','dos','das','d','e']);
+const IA_TOK_MAP = {
+  // santo/santa/são
+  'sto': 'santo', 'sant': 'santo', 'snt': 'santo', 'sta': 'santa', 'sn': 'sao',
+  // descoberto
+  'desc': 'descoberto', 'dsc': 'descoberto', 'descob': 'descoberto', 'descobr': 'descoberto',
+  // aparecida
+  'ap': 'aparecida',
+};
+
+function iaNormalizeInput(s){
+  return normalize(String(s||''))
+    .replace(/[^0-9a-z\s]/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
+function iaTokenize(raw){
+  const qn = iaNormalizeInput(raw);
+  if(!qn) return [];
+  const parts = qn.split(' ');
+  const out = [];
+  for (let i=0;i<parts.length;i++){
+    let w = parts[i];
+    if(!w) continue;
+    if (IA_TOK_MAP[w]) w = IA_TOK_MAP[w];
+    if (!w || IA_STOPWORDS.has(w)) continue;
+    if (w.length < 2) continue; // ignora tokens curtos
+    out.push(w);
+  }
+  // Heurística: "ap de go" / "ap de goiania" => tende a "aparecida de goiania"
+  if(out.length >= 2 && out[0] === 'aparecida'){
+    for(let i=1;i<out.length;i++){
+      if(out[i] === 'go') out[i] = 'goiania';
+    }
+  }
+  return out;
+}
+
+// Cache das cidades
+const IA_ALL = (typeof allCities !== 'undefined' && Array.isArray(allCities)) ? allCities : [];
+const IA_ALL_N = IA_ALL.map(normalize);
+const IA_ALL_TOK = IA_ALL_N.map(s => s.split(' ').filter(t => t && !IA_STOPWORDS.has(t)));
+
+function iaTokenAlignScore(qTokens, cityTokens){
+  let pos=0, score=0, ok=0;
+  for(const qt of qTokens){
+    let found=-1;
+    for(let j=pos;j<cityTokens.length;j++){
+      if(cityTokens[j].startsWith(qt)) { found=j; break; }
+    }
+    if(found === -1){
+      score -= 2.2;
+      continue;
+    }
+    ok++;
+    score += Math.min(7, qt.length) + (qt.length >= 4 ? 2.2 : 0);
+    score -= (found - pos) * 0.35;
+    pos = found + 1;
+  }
+  score += ok * 0.9;
+  score -= Math.max(0, cityTokens.length - qTokens.length) * 0.15;
+  return { score, ok };
+}
+
+const RANK_MEMO = new Map();
+function rankSuggestions(inputRaw, limit=3){
+  if(!IA_ALL.length) return { picks: [], best:null, second:null };
+
+  const qNorm = iaNormalizeInput(inputRaw);
+  const qTokens = iaTokenize(inputRaw);
+  const memoKey = qNorm + '|' + limit;
+  if (RANK_MEMO.has(memoKey)) return RANK_MEMO.get(memoKey);
+
+  const scored = [];
+  for(let i=0;i<IA_ALL.length;i++){
+    const name = IA_ALL[i];
+    const n = IA_ALL_N[i];
+    let score = 0;
+
+    const ta = iaTokenAlignScore(qTokens, IA_ALL_TOK[i]);
+    score += ta.score;
+
+    // penaliza falta de cobertura de tokens
+    if (qTokens.length >= 2) score -= (qTokens.length - ta.ok) * 4.0;
+    if (qTokens.length >= 2 && ta.ok === qTokens.length) score += 7.0;
+
+    const d = levenshtein(qNorm, n);
+    const distBonus = Math.max(0, 12 - d*2.2);
+    score += distBonus;
+
+    if(n.startsWith(qNorm) && qNorm.length >= 4) score += 6;
+    else if(n.includes(qNorm) && qNorm.length >= 5) score += 2;
+
+    // penaliza candidatos sem match quando tem 2+ tokens
+    if(qTokens.length >= 2 && ta.ok === 0) score -= 8;
+
+    scored.push({ name, score, d, ok: ta.ok });
+  }
+
+  scored.sort((a,b)=> b.score - a.score);
+  const best = scored[0];
+  const second = scored[1];
+
+  const gap = (best && second) ? (best.score - second.score) : 999;
+  const obviousByDist = (best && best.d <= 1 && qNorm.length >= 6);
+  const fullCover = (best && qTokens.length >= 2 && best.ok === qTokens.length);
+  const manyTokens = (best && best.ok >= 3 && qTokens.length >= 3);
+  const obviousByTokens = fullCover || manyTokens;
+  const obviousGap = fullCover ? (gap >= 6) : (gap >= 10);
+  const single = (obviousByDist || obviousByTokens) && obviousGap;
+
+  const picks=[];
+  const seen=new Set();
+  for(const it of scored){
+    if(picks.length >= (single ? 1 : limit)) break;
+    const k = normalize(it.name);
+    if(seen.has(k)) continue;
+    seen.add(k);
+    picks.push(it.name);
+  }
+
+    const out = { picks, best, second };
+  RANK_MEMO.set(memoKey, out);
+  return out;
+}
+
+  </script>
+
+  <script>
+/* =============================================================== */
+/* ASSETS/JS/UI-CORE.JS */
+/* =============================================================== */
+// ====== UI / ELEMENTOS ======
+
+
+// === PATCH FPS (Edge): anima abertura/fechamento do container de sugestões por ALTURA REAL ===
+function openSuggestWrap(wrap){
+  if(!wrap) return;
+  wrap.classList.add('is-open');
+  wrap.style.height = '0px';
+  wrap.getBoundingClientRect();
+  var target = wrap.scrollHeight;
+  wrap.style.height = target + 'px';
+  var onEnd = function(e){
+    if(e.propertyName !== 'height') return;
+    wrap.style.height = 'auto';
+    wrap.removeEventListener('transitionend', onEnd);
+  };
+  wrap.addEventListener('transitionend', onEnd);
+}
+function closeSuggestWrap(wrap){
+  if(!wrap) return;
+  var current = wrap.scrollHeight;
+  wrap.style.height = current + 'px';
+  wrap.getBoundingClientRect();
+  wrap.style.height = '0px';
+  wrap.classList.remove('is-open');
+}
+
+// Força o wrapper de sugestões a fechar imediatamente (útil ao segurar Backspace)
+function hardResetSuggestWrap(wrap){
+  if(!wrap) return;
+  wrap.classList.remove('is-open');
+  wrap.style.height = '0px';
+  wrap.innerHTML = '';
+}
+
+
+// Helper: debounce para estabilizar eventos de digitação
+function debounce(fn, wait=120){
+  let t;
+  return (...args)=>{
+    clearTimeout(t);
+    t=setTimeout(()=>fn.apply(null,args), wait);
+  };
+}
+
+    const q = document.getElementById('q');
+
+// === V4.0+: Auto-foco no campo ao voltar para a aba/janela (foco + select) ===
+// Extra: não “rouba” foco se o usuário já estiver em outro campo editável.
+(function autoFocusOnReturn(){
+  const q = document.getElementById('q');
+  if(!q) return;
+
+  function isEditable(el){
+    if(!el) return false;
+    const tag = (el.tagName || '').toLowerCase();
+    if(tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+    if(el.isContentEditable) return true;
+    if(el.closest){
+      const ce = el.closest('[contenteditable="true"], [contenteditable="plaintext-only"]');
+      if(ce) return true;
+    }
+    return false;
+  }
+
+  function shouldAutoFocus(){
+    const active = document.activeElement;
+    if(active === q) return true;
+    if(isEditable(active)) return false;
+    return true;
+  }
+
+  function focusAndSelect(){
+    if(!shouldAutoFocus()) return;
+    try{ q.focus({preventScroll:true}); }catch(e){ q.focus(); }
+    try{ q.select(); }catch(e){}
+    requestAnimationFrame(()=>{ try{ q.select(); }catch(e){} });
+  }
+
+  if(document.visibilityState === 'visible') setTimeout(focusAndSelect, 80);
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'visible') setTimeout(focusAndSelect, 80);
+  });
+  window.addEventListener('focus', ()=> setTimeout(focusAndSelect, 80));
+  window.addEventListener('pageshow', ()=> setTimeout(focusAndSelect, 80));
+})();
+
+    q.addEventListener('focus', () => {
+      q.select();
+    });
+
+    const btn = document.getElementById('btn');
+    const out = document.getElementById('out');
+const copyBtn = document.getElementById('copyBtn');
+
+    const chipsAna = document.getElementById('chips-ana');
+    const chipsBra = document.getElementById('chips-bra');
+    const chipsCob = document.getElementById('chips-cob');
+
+// =====================================================
+// V7.1.8.6 — Scrollbar custom (thumb-only) para as listas (.chips)
+// =====================================================
+function getCardOf(el){
+  return el ? (el.closest ? el.closest('.card') : null) : null;
+}
+function ensureCustomScrollbar(chipsEl){
+  const card = getCardOf(chipsEl);
+  if(!card) return null;
+  let bar = card.querySelector(':scope > .chips-scrollbar');
+  if(!bar){
+    bar = document.createElement('div');
+    bar.className = 'chips-scrollbar';
+    bar.setAttribute('aria-hidden','true');
+    bar.innerHTML = '<div class="thumb"></div>';
+    card.appendChild(bar);
+  }
+  return bar;
+}
+function syncCustomScrollbar(chipsEl){
+  if(!chipsEl) return;
+  const bar = ensureCustomScrollbar(chipsEl);
+  if(!bar) return;
+  const thumb = bar.querySelector('.thumb');
+  const card = getCardOf(chipsEl);
+  const scrollH = chipsEl.scrollHeight || 0;
+  const viewH = chipsEl.clientHeight || 0;
+  if(scrollH <= viewH + 1){ bar.classList.add('is-hidden'); return; }
+  bar.classList.remove('is-hidden');
+  const rChips = chipsEl.getBoundingClientRect();
+  const rCard  = card.getBoundingClientRect();
+  bar.style.top = (rChips.top - rCard.top) + 'px';
+  bar.style.height = viewH + 'px';
+  const ratio = viewH / scrollH;
+  const minThumb = 26;
+  const thumbH = Math.max(minThumb, Math.round(viewH * ratio));
+  const maxTop = Math.max(0, viewH - thumbH);
+  const t = chipsEl.scrollTop / Math.max(1, (scrollH - viewH));
+  thumb.style.height = thumbH + 'px';
+  thumb.style.top = Math.round(maxTop * t) + 'px';
+}
+function bindCustomScrollbar(chipsEl){
+  if(!chipsEl) return;
+  const bar = ensureCustomScrollbar(chipsEl);
+  if(!bar) return;
+  const thumb = bar.querySelector('.thumb');
+  const card = getCardOf(chipsEl);
+  let scrollTimer = null;
+  chipsEl.addEventListener('scroll', () => {
+
+  syncCustomScrollbar(chipsEl);
+
+  if(!card) return;
+
+  card.classList.add('is-scrolling');
+
+  if(scrollTimer){
+    clearTimeout(scrollTimer);
+  }
+
+  scrollTimer = setTimeout(()=>{
+    card.classList.remove('is-scrolling');
+  },800);
+
+},{passive:true});
+  bar.addEventListener('mousedown', (e) => {
+    if(e.target === thumb) return;
+    const rect = bar.getBoundingClientRect();
+    const clickY = e.clientY - rect.top;
+    const scrollH = chipsEl.scrollHeight;
+    const viewH = chipsEl.clientHeight;
+    const maxScroll = Math.max(1, scrollH - viewH);
+    const t = Math.min(1, Math.max(0, clickY / rect.height));
+    chipsEl.scrollTop = t * maxScroll;
+  });
+  let dragging=false, startY=0, startTop=0;
+  thumb.addEventListener('mousedown', (e) => {
+    dragging=true; startY=e.clientY;
+    startTop=parseFloat(getComputedStyle(thumb).top)||0;
+    document.body.style.userSelect='none';
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', (e) => {
+    if(!dragging) return;
+    const rect = bar.getBoundingClientRect();
+    const scrollH = chipsEl.scrollHeight;
+    const viewH = chipsEl.clientHeight;
+    const thumbH = thumb.getBoundingClientRect().height;
+    const maxTop = Math.max(1, rect.height - thumbH);
+    const dy = e.clientY - startY;
+    const newTop = Math.min(maxTop, Math.max(0, startTop + dy));
+    const t = newTop / maxTop;
+    chipsEl.scrollTop = t * (scrollH - viewH);
+  });
+  window.addEventListener('mouseup', () => {
+    if(!dragging) return;
+    dragging=false; document.body.style.userSelect='';
+  });
+  requestAnimationFrame(() => syncCustomScrollbar(chipsEl));
+}
+function initCustomScrollbars(){
+  try{
+    [chipsAna, chipsBra, chipsCob].forEach(bindCustomScrollbar);
+    window.addEventListener('resize', () => {
+      [chipsAna, chipsBra, chipsCob].forEach(syncCustomScrollbar);
+    });
+  }catch(e){}
+}
+
+
+// ====== ÍNDICE DE CHIPS (performance) ======
+let CHIP_INDEX = null;
+function buildChipIndex(){
+  CHIP_INDEX = new Map();
+  document.querySelectorAll('.chip').forEach((el)=>{
+    const k = normalize(el.textContent);
+    if(!CHIP_INDEX.has(k)) CHIP_INDEX.set(k, []);
+    CHIP_INDEX.get(k).push(el);
+  });
+}
+
+
+// Helper: ensure external suggestion container exists
+function ensureOutSuggest(){
+  var el = document.getElementById('outSuggest');
+  if (!el) {
+    if (!out) return null;
+    out.insertAdjacentHTML('afterend','<section id="outSuggest" class="result-suggest-wrap" aria-live="polite" aria-atomic="true"></section>');
+    el = document.getElementById('outSuggest');
+  }
+  return el;
+}
+
+// ====== SUGESTÃO: cor por núcleo (V10.0.2) ======
+function sugestaoCategoria(cityText){
+  const k = normalize(cityText);
+  const inAna = setAna.has(k);
+  const inBra = setBra.has(k);
+  const inCob = setCob.has(k);
+  const count = (inAna?1:0) + (inBra?1:0) + (inCob?1:0);
+  if (count >= 2) return 'nao';
+  if (inCob) return 'ok';
+  if (inBra) return 'bra';
+  if (inAna) return 'ana';
+  return 'nao';
+}
+
+function tag(text) { const s = document.createElement('span'); s.className='chip'; s.textContent=text; s.tabIndex=0; return s; }
+ function renderLists() {
+  if (!chipsAna || !chipsBra || !chipsCob) return;
+  chipsAna.innerHTML = '';
+  chipsBra.innerHTML = '';
+  chipsCob.innerHTML = '';
+  anapolis.forEach(c => chipsAna.appendChild(tag(c)));
+  brasilia.forEach(c => chipsBra.appendChild(tag(c)));
+  cobertura.forEach(c => chipsCob.appendChild(tag(c)));
+  buildChipIndex();
+}
+
+function line(html) { const d = document.createElement('div'); d.innerHTML = html; return d; }
+
+  </script>
+
+  <script>
+/* =============================================================== */
+/* ASSETS/JS/CHIPS.JS */
+/* =============================================================== */
+// ====== CHIPS (delegação de eventos) — V10.0.1 ======
+function onChipActivate(text){
+  if(!text) return;
+  try{ rememberAlias(q.value || text, normalize(text)); }catch(e){}
+  q.value = text;
+  buscar();
+}
+function setupChipDelegation(){
+  if(setupChipDelegation._bound) return;
+  setupChipDelegation._bound = true;
+  document.addEventListener('click', (e) => {
+    const chip = e.target && e.target.closest ? e.target.closest('.chip') : null;
+    if(!chip) return;
+    onChipActivate(chip.textContent);
+  });
+  document.addEventListener('keydown', (e) => {
+    if(e.key !== 'Enter') return;
+    const chip = e.target && e.target.closest ? e.target.closest('.chip') : null;
+    if(!chip) return;
+    e.preventDefault();
+    onChipActivate(chip.textContent);
+  });
+}
+
+// ====== DESTAQUE NA LISTA ======
+function clearHighlights() {
+  document.querySelectorAll('.chip.is-highlight')
+    .forEach(el => el.classList.remove('is-highlight'));
+}
+
+function highlightCityByKey(cityKeyNormalized) {
+  if (!cityKeyNormalized) return false;
+  clearHighlights();
+
+  // Índice O(1) (reconstrói quando necessário)
+  if (!CHIP_INDEX) buildChipIndex();
+  const matches = CHIP_INDEX ? (CHIP_INDEX.get(cityKeyNormalized) || []) : [];
+  if (!matches.length) return false;
+
+  matches.forEach(el => el.classList.add('is-highlight'));
+  const first = matches[0];
+  first.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+  requestAnimationFrame(() => { try { first.focus({ preventScroll: true }); } catch(e) {} });
+  return true;
+}
+// ============================================================
+
+    // Render chips
+
+  </script>
+
+  <script>
+/* =============================================================== */
+/* ASSETS/JS/RESULT.JS */
+/* =============================================================== */
+// ====== RENDERIZAÇÃO DE RESULTADO & DICAS ======
+
+
+// ====== RENDERIZAÇÃO DE RESULTADO & DICAS ====== + estados especiais
+function mostrarResultado(termOriginal, focoCidade, status, sugestoes = [], aliasCanonico = null, listasEncontradas = []) {
+  out.innerHTML = '';
+  const outSug = ensureOutSuggest();
+  if (outSug) { closeSuggestWrap(outSug); outSug.innerHTML = '';  }
+
+  if (status === 'ana') out.appendChild(line(`<div class="badge ana">✖︎ Núcleo Anápolis</div>`));
+  else if (status === 'bra') out.appendChild(line(`<div class="badge bra">✖︎ Núcleo Brasília</div>`));
+  else if (status === 'nossa') out.appendChild(line(`<div class="badge ok">✔ Nossa abrangência</div>`));
+  else if (status === 'dup') {
+    out.appendChild(line(`<div class="badge nao">! erro — cidade presente em ${listasEncontradas.length} listas</div>`));
+    const etiquetas = listasEncontradas.map(k => {
+      if (k === 'ana') return 'Núcleos Anápolis';
+      if (k === 'bra') return 'Núcleos Brasília';
+      if (k === 'nossa') return 'Nossa Abrangência';
+      return k;
+    });
+    out.appendChild(line(`<div class="hint">Conflito detectado em: <strong>${etiquetas.join(' · ')}</strong></div>`));
+  } else {
+    out.appendChild(line(`<div class="badge nao">⚠ Não localizado</div>`));
+  }
+
+  const labelCidade = (focoCidade ? escapeHtml(focoCidade) : '<i>não identificado</i>');
+
+  out.appendChild(line(`<div>Cidade analisada: <strong>${labelCidade}</strong></div>`));
+
+  if (status === 'nao' && Array.isArray(sugestoes) && sugestoes.length && outSug) {
+    const sug = document.createElement('div');
+    sug.className = 'suggest anim-drop';
+    sug.setAttribute('role', 'status');
+    sug.innerHTML = `
+      <div class="sug-icon">💡</div>
+      <div>
+        <div class="sug-title">Você quis dizer</div>
+        <div class="sug-sub">Selecione uma opção para aplicar</div>
+      </div>
+      <div class="sug-actions"></div>
+    `;
+    const actions = sug.querySelector('.sug-actions');
+    sugestoes.forEach((sText) => {
+      const b = document.createElement('button');
+      const cat = sugestaoCategoria(sText);
+      b.className = 'sug-pill ' + cat;
+      b.type = 'button';
+      b.textContent = sText;
+      b.setAttribute('aria-label', `Usar sugestão ${sText}`);
+      b.addEventListener('click', () => { rememberAlias(termOriginal, normalize(sText)); q.value = sText; buscar(); });
+      actions.appendChild(b);
+    });
+    outSug.appendChild(sug);
+    openSuggestWrap(outSug);
+  }
+}
+
+  </script>
+
+  <script>
+/* =============================================================== */
+/* ASSETS/JS/SEARCH-ACTIONS.JS */
+/* =============================================================== */
+// ====== BUSCA / AÇÕES ======
+
+function buscar() {
+  try {
+    const raw = q.value || '';
+    if (!raw.trim()) {
+      const outSug = ensureOutSuggest();
+      if (outSug) { closeSuggestWrap(outSug); outSug.innerHTML = ''; outSug.style.height = '0px'; }
+      out.innerHTML = '<div class=\"hint\">Cole ou digite um texto contendo a cidade.</div>';
+      return;
+    }
+
+    clearHighlights();
+
+    const cidadeBruta = extractCity(raw);
+    const keyRaw = normalize(cidadeBruta);
+    let key = keyRaw;
+    let aliasCanonico = null;
+    const inAna = setAna.has(keyRaw);
+    const inBra = setBra.has(keyRaw);
+    const inCob = setCob.has(keyRaw);
+
+    const listasEncontradas = [];
+    if (inAna) listasEncontradas.push('ana');
+    if (inBra) listasEncontradas.push('bra');
+    if (inCob) listasEncontradas.push('nossa');
+
+    if (listasEncontradas.length >= 2) {
+      highlightCityByKey(keyRaw);
+      mostrarResultado(raw, cidadeBruta, 'dup', [], null, listasEncontradas);
+return;
+    }
+
+    if (inAna) { highlightCityByKey(keyRaw); mostrarResultado(raw, cidadeBruta, 'ana', [], null); return; }
+    if (inBra) { highlightCityByKey(keyRaw); mostrarResultado(raw, cidadeBruta, 'bra', [], null); return; }
+    if (inCob) { highlightCityByKey(keyRaw); mostrarResultado(raw, cidadeBruta, 'nossa', [], null); return; }
+
+const aliasPick = getDynamicAliasSuggestion(raw, cidadeBruta);
+
+const ranked = rankSuggestions(cidadeBruta, 3);
+let sugs = ranked.picks;
+
+if (aliasPick){
+  sugs = [aliasPick, ...sugs.filter(s => normalize(s) !== normalize(aliasPick))].slice(0, 3);
+}
+
+mostrarResultado(raw, cidadeBruta, 'nao', sugs, null);  } catch (err) {
+    console.error('Erro no buscar():', err);
+    try {
+      const outSug = ensureOutSuggest();
+      if (outSug) { closeSuggestWrap(outSug); outSug.innerHTML = '';  }
+      if (out) out.innerHTML = "<div class=\"hint\">\u26a0 Ocorreu um erro ao processar o texto. Tente novamente.</div>";
+    } catch (_) {}
+  }
+}
+
+
+// ====== ACESSIBILIDADE / ATALHOS ======
+    document.addEventListener('keydown', (e)=>{
+      if (e.altKey && e.key === 'Enter') {
+        const first = out.querySelector('.sug-actions .sug-pill');
+        if (first) { first.click(); }
+      }
+    });
+
+    
+// ====== BUSCA AO DIGITAR (opção 2) ======
+// Não exibe "Não localizado" com poucas letras; só busca a partir de 2 caracteres.
+const AUTOSEARCH_MIN_CHARS = 2;
+
+q.addEventListener('input', debounce(() => {
+  const cidade = extractCity(q.value);
+  const v = normalize(cidade);
+
+  // Se apagou tudo, volta ao estado inicial
+  if (!v) {
+    q.removeAttribute('title');
+    clearHighlights();
+    const outSug = ensureOutSuggest();
+    if (outSug) { closeSuggestWrap(outSug); outSug.innerHTML = ''; outSug.style.height = '0px'; }
+    out.innerHTML = '<div class="hint">Cole ou digite um texto contendo a cidade.</div>';
+    if (outSug) hardResetSuggestWrap(outSug);
+    return;
+  }
+
+  // Mantém o title de sugestão (como antes)
+  const all = [...anapolis, ...brasilia, ...cobertura];
+  const found = all.find(c => normalize(c).startsWith(v));
+  if (found && cidade.length > 1) {
+    q.title = `Sugestão: ${found}`;
+  } else {
+    q.removeAttribute('title');
+  }
+
+  // Opção 2: só começa a avaliar após 2 letras
+  if (v.length < AUTOSEARCH_MIN_CHARS) {
+    clearHighlights();
+    const outSug = ensureOutSuggest();
+    if (outSug) { closeSuggestWrap(outSug); outSug.innerHTML = '';  }
+    out.innerHTML = '<div class="hint">Digite pelo menos ' + AUTOSEARCH_MIN_CHARS + ' letras da cidade para localizar.</div>';
+    return;
+  }
+
+  // Busca automática enquanto digita
+  buscar();
+}, 180));
+
+  </script>
+
+  <script>
+/* =============================================================== */
+/* ASSETS/JS/CLIPBOARD.JS */
+/* =============================================================== */
+// =========================
+// V8.0.2 — Botão COLAR (da área de transferência)
+// =========================
+// =========================
+// V8.0.3 — FIX: cliques rápidos não bugam o ícone do botão COLAR (📋/✅/⚠)
+// =========================
+const COPYBTN_DEFAULT_ICON = (copyBtn && String(copyBtn.textContent || '').trim())
+  ? String(copyBtn.textContent).trim()
+  : '📋';
+let copyBtnTimer = null;
+
+function setCopyBtnIcon(icon, { copiedClass = false, duration = 900 } = {}){
+  if(!copyBtn) return;
+  if(copyBtnTimer){ clearTimeout(copyBtnTimer); copyBtnTimer = null; }
+  copyBtn.textContent = icon;
+  copyBtn.classList.toggle('is-copied', !!copiedClass);
+  copyBtnTimer = setTimeout(() => {
+    copyBtn.textContent = COPYBTN_DEFAULT_ICON;
+    copyBtn.classList.remove('is-copied');
+    copyBtnTimer = null;
+  }, duration);
+}
+
+function pulsePasted(){
+  setCopyBtnIcon('✅', { copiedClass: true, duration: 900 });
+}
+
+function pulseWarn(){
+  setCopyBtnIcon('⚠', { copiedClass: false, duration: 900 });
+}
+
+function pasteFromClipboard(){
+  // A API de leitura do clipboard só funciona em contexto seguro (https/localhost) e com gesto do usuário.
+  if (!window.isSecureContext || !(navigator.clipboard && navigator.clipboard.readText)) {
+    if (q){
+      try{ q.focus({preventScroll:true}); }catch(e){ q.focus(); }
+      try{ q.select(); }catch(e){}
+    }
+    try{ copyBtn.title = 'Não foi possível ler a área de transferência aqui. Use Ctrl+V/⌘V no campo.'; }catch(e){}
+    pulseWarn();
+    return;
+  }
+
+  navigator.clipboard.readText()
+    .then((txt) => {
+      const t = String(txt || '').trim();
+      if (!t){
+        try{ copyBtn.title = 'Área de transferência vazia.'; }catch(e){}
+        pulseWarn();
+        return;
+      }
+      if (q){
+        q.value = t;
+        try{ q.focus({preventScroll:true}); }catch(e){ q.focus(); }
+        try{ q.setSelectionRange(q.value.length, q.value.length); }catch(e){}
+      }
+      // dispara a busca imediatamente
+      try{ buscar(); }catch(e){}
+      try{ copyBtn.title = 'Colado!'; }catch(e){}
+      pulsePasted();
+    })
+    .catch(() => {
+      if (q){
+        try{ q.focus({preventScroll:true}); }catch(e){ q.focus(); }
+        try{ q.select(); }catch(e){}
+      }
+      try{ copyBtn.title = 'Permissão negada. Cole manualmente com Ctrl+V/⌘V.'; }catch(e){}
+      pulseWarn();
+    });
+}
+// Botão colar (fica dentro do campo)
+if (copyBtn){
+  copyBtn.addEventListener('click', pasteFromClipboard);
+}
+
+  </script>
+
+  <script>
+/* =============================================================== */
+/* ASSETS/JS/THEME.JS */
+/* =============================================================== */
+// =========================
+// THEME_TOGGLE_V1 — Alternância de tema (Light/Dark)
+// - Escuro é padrão
+// - Salva preferência no localStorage
+// - Respeita prefers-color-scheme quando não há preferência salva
+// =========================
+(function(){
+  const BTN = document.getElementById('themeBtn');
+  if(!BTN) return;
+
+  const KEY = 'theme_pref_v1';
+  const root = document.documentElement;
+
+  const ICON_SUN = '<path fill="currentColor" d="M12 15q1.25 0 2.125-.875T15 12t-.875-2.125T12 9t-2.125.875T9 12t.875 2.125T12 15m0 1q-1.671 0-2.835-1.164Q8 13.67 8 12t1.165-2.835T12 8t2.836 1.165T16 12t-1.164 2.836T12 16m-7-3.5H1.5v-1H5zm17.5 0H19v-1h3.5zM11.5 5V1.5h1V5zm0 17.5V19h1v3.5zM6.746 7.404l-2.16-2.098l.695-.745l2.111 2.135zM18.72 19.439l-2.117-2.141l.652-.702l2.16 2.098zM16.596 6.745l2.098-2.16l.745.695l-2.135 2.111zM4.562 18.72l2.14-2.117l.664.652l-2.08 2.179zM12 12"/>';
+  const ICON_MOON = '<path fill="currentColor" d="M12 21q-3.75 0-6.375-2.625T3 12t2.625-6.375T12 3q.35 0 .688.025t.662.075q-1.025.725-1.638 1.888T11.1 7.5q0 2.25 1.575 3.825T16.5 12.9q1.375 0 2.525-.613T20.9 10.65q.05.325.075.662T21 12q0 3.75-2.625 6.375T12 21"/>';
+
+  function getSystemTheme(){
+    try{
+      return (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+    }catch(e){ return 'dark'; }
+  }
+
+  function setMetaThemeColor(theme){
+    try{
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if(!meta) return;
+      meta.setAttribute('content', theme === 'light' ? '#f3f6fb' : '#0b1020');
+    }catch(e){}
+  }
+
+  function renderBtn(theme){
+    const svg = BTN.querySelector('svg');
+    if(svg){
+      svg.innerHTML = (theme === 'light') ? ICON_MOON : ICON_SUN;
+    }
+    const tip = (theme === 'light') ? 'Alternar para tema escuro' : 'Alternar para tema claro';
+    BTN.setAttribute('data-tooltip', tip);
+    BTN.setAttribute('aria-label', tip);
+  }
+
+  function apply(theme, persist=false){
+    const t = (theme === 'light') ? 'light' : 'dark';
+    if(t === 'light') root.setAttribute('data-theme','light');
+    else root.removeAttribute('data-theme');
+    renderBtn(t);
+    setMetaThemeColor(t);
+    if(persist){
+      try{ localStorage.setItem(KEY, t); }catch(e){}
+    }
+  }
+
+  let saved=null;
+  try{ saved = localStorage.getItem(KEY); }catch(e){}
+  const initial = (saved === 'light' || saved === 'dark') ? saved : getSystemTheme();
+  apply(initial, false);
+
+  BTN.addEventListener('click', () => {
+    const current = root.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    const next = (current === 'light') ? 'dark' : 'light';
+    apply(next, true);
+});
+})();
+
+  </script>
+
+  <script>
+/* =============================================================== */
+/* ASSETS/JS/MAIN.JS */
+/* =============================================================== */
+if (btn){ btn.addEventListener('click', buscar); }
+
+q.addEventListener('keydown', (e) => { if (e.key === 'Enter') buscar(); });
+
+// ====== INICIALIZAÇÃO ======
+    if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', renderLists);
+  window.addEventListener('DOMContentLoaded', buildChipIndex);
+  window.addEventListener('DOMContentLoaded', initCustomScrollbars);
+ window.addEventListener('DOMContentLoaded', setupChipDelegation);
+} else {
+  renderLists();
+  buildChipIndex();
+  initCustomScrollbars();
+ setupChipDelegation();
+}
+
+// ================================================
+
+
+
+// === Detecta Edge e aplica classe para correções específicas (blur) ===
+(function(){
+  try{
+    var ua = navigator.userAgent || '';
+    if (ua.indexOf('Edg/') !== -1) document.documentElement.classList.add('is-edge');
+  }catch(e){}
+})();
+
+  </script>
+
+  <script>
+/* =============================================================== */
+/* ASSETS/JS/GLOW.JS */
+/* =============================================================== */
+(function(){
+  try{
+  var isLite = document.documentElement && document.documentElement.classList && document.documentElement.classList.contains('perf-lite');
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    var root = document.documentElement;
+    var anchors = [
+      [-18, -12], [18, -12],
+      [-18,  14], [18,  14],
+      [-22,   2], [22,   2],
+      [  0, -14], [ 0,  16]
+    ];
+
+    function rand(min, max){ return Math.random() * (max - min) + min; }
+
+    function pickAnchor(prevIdx){
+      var idx;
+      do { idx = Math.floor(Math.random() * anchors.length); }
+      while (idx === prevIdx);
+      var a = anchors[idx];
+      var x = a[0] + rand(-3.2, 3.2);
+      var y = a[1] + rand(-2.2, 2.2);
+      var s = rand(0.98, 1.08);
+      return { idx: idx, x: x, y: y, s: s };
+    }
+
+    function setVars(x, y, s, glow, halo){
+    if(isLite){ glow = Math.min(glow, 0.65); halo = Math.min(halo, 0.55); }
+      root.style.setProperty('--gX', x.toFixed(2) + 'vw');
+      root.style.setProperty('--gY', y.toFixed(2) + 'vh');
+      root.style.setProperty('--gS', s.toFixed(3));
+      root.style.setProperty('--gO', glow.toFixed(3));
+      root.style.setProperty('--hO', halo.toFixed(3));
+    }
+    setVars(0, 18, 0.98, 0.0, 0.0);
+
+    var prev = -1;
+
+    function cycle(){
+      var spot = pickAnchor(prev);
+      prev = spot.idx;
+      setVars(spot.x, spot.y, spot.s, 0.0, 0.0);
+setTimeout(function(){ 
+  setVars(spot.x, spot.y, spot.s, 0.82, 0.68); 
+}, 280); 
+var onTime = isLite ? rand(7600, 10800) : rand(6200, 9000); 
+setTimeout(function(){ 
+  setVars(spot.x, spot.y, spot.s, 0.0, 0.0); 
+}, 280 + onTime); 
+var offTime = isLite ? rand(2600, 3800) : rand(2200, 3200); 
+setTimeout(cycle, 280 + onTime + 4200 + offTime);
+    }
+    setTimeout(cycle, 520);
+
+  } catch(e){}
+})();
+
+  </script>
+</body>
+</html>
